@@ -1,6 +1,0 @@
-/home/jacobsp/Projects/Cyclone/obj/x86/Debug/Cyclone.csproj.CoreCompileInputs.cache
-/home/jacobsp/Projects/Cyclone/bin/Debug/Cyclone.exe
-/home/jacobsp/Projects/Cyclone/bin/Debug/Cyclone.pdb
-/home/jacobsp/Projects/Cyclone/obj/x86/Debug/Cyclone.csprojAssemblyReference.cache
-/home/jacobsp/Projects/Cyclone/obj/x86/Debug/Cyclone.exe
-/home/jacobsp/Projects/Cyclone/obj/x86/Debug/Cyclone.pdb
