@@ -5,11 +5,23 @@ namespace Cyclone {
         public const int WIN_W = 600;
         public const int WIN_H = 400;
         public const uint defPadding = 20;
+        
+        public const int STORE_MAKE_P = 0;
+        public const int STORE_MODEL_P = 1;
+        public const int STORE_TYPE_P = 2;
+        
+        public const int ICON_SIDE = 32;
+        public const int TOOL_SIDE = 24;
 
         public TreeView modelTree;
         public ImageMenuItem importItem;
         public ImageMenuItem exportItem;
         public Label modelAmount;
+        
+        public ToolButton addModelButton;
+        public ToolButton editModelButton;
+        public ToolButton removeModelButton;
+    
 
         public ModelsEditor() : base (WindowType.Toplevel) {
             SetDefaultSize(WIN_W, WIN_H);
@@ -18,7 +30,7 @@ namespace Cyclone {
             Title = "Customise bike models";
                // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                     "Cyclone.Assets.Bike_Yellow.png", 32, 32);
+                     "Cyclone.Assets.Bike_Yellow.png", ICON_SIDE, ICON_SIDE);
             Icon = windowIcon;
             
             // Create uppermost container
@@ -67,6 +79,32 @@ namespace Cyclone {
         
             windowList.PackEnd(statusbar, false, false, 0);
             
+            // Create toolbar and add it to window
+            Toolbar bikeToolbar = new Toolbar();
+            bikeToolbar.MarginLeft = (int) defPadding;
+            bikeToolbar.MarginRight = (int) defPadding;
+
+            Gdk.Pixbuf addModelIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                     "Cyclone.Assets.Add_2.png", TOOL_SIDE, TOOL_SIDE);
+            Image addBikeImg = new Image(addModelIcon);
+
+            Gdk.Pixbuf editModelIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                     "Cyclone.Assets.Edit.png", TOOL_SIDE, TOOL_SIDE);
+            Image editBikeImg = new Image(editModelIcon);
+    
+            Gdk.Pixbuf removeModelIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                     "Cyclone.Assets.Close.png", TOOL_SIDE, TOOL_SIDE);
+            Image removeBikeImg = new Image(removeModelIcon);
+            
+            addModelButton = new ToolButton(addBikeImg, "Add Model");
+            editModelButton = new ToolButton(editBikeImg, "Edit Model");
+            removeModelButton = new ToolButton(removeBikeImg, "Remove Model");
+           
+            bikeToolbar.Insert(addModelButton, 0);
+            bikeToolbar.Insert(editModelButton, 1);
+            bikeToolbar.Insert(removeModelButton, 2);
+            windowList.PackEnd(bikeToolbar, false, true, 0);
+            
             // Create frame, set border
             Frame mainFrame = new Frame("Valid Bike Models");
             
@@ -87,22 +125,20 @@ namespace Cyclone {
             modelTree.HeadersVisible = true;
             modelTree.EnableGridLines = TreeViewGridLines.Both;
             
-            modelTree.AppendColumn("Make", new CellRendererText(), "text", 0);
-            modelTree.AppendColumn("Model", new CellRendererText(), "text", 1);
-            modelTree.AppendColumn("Type", new CellRendererText(), "text", 2);
+            modelTree.AppendColumn("Make", new CellRendererText(), "text", STORE_MAKE_P);
+            modelTree.AppendColumn("Model", new CellRendererText(), "text", STORE_MODEL_P);
+            modelTree.AppendColumn("Type", new CellRendererText(), "text", STORE_TYPE_P);
             
             modelTree.CanFocus = true;
             modelTree.Selection.Mode = SelectionMode.Multiple;
             //modelTree.Selection.Changed += changeRowSelection;
     
             // Set attributes for all columns
-            int colCounter = 0;
     
             foreach (TreeViewColumn column in modelTree.Columns) {
                 column.Resizable = true;
                 column.Clickable = true;
                 column.Expand = true;
-                colCounter++;
             }
 
             // Add tree to scrollable

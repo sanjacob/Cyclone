@@ -8,6 +8,7 @@ public partial class MainWindow : Gtk.Window {
     public ImageMenuItem exportItem;
     public MenuItem modelsItem;
     public CheckMenuItem changeView;
+    public MenuItem aboutItem;
 
     public bool allSelected = false;
     public Label bikeAmount;
@@ -18,6 +19,16 @@ public partial class MainWindow : Gtk.Window {
     public const uint defPadding = 20;
     public const int WIN_W = 800;
     public const int WIN_H = 500;
+    public const int ICON_SIDE = 32;
+    
+    public const int ICON_H = 42;
+    public const int ICON_W = 38;
+    
+    public const int STORE_MAKE_P = 1;
+    public const int STORE_MODEL_P = 2;
+    public const int STORE_TYPE_P = 4;
+    public const int STORE_YEAR_P = 3;
+
 
     public MainWindow() : base(Gtk.WindowType.Toplevel) {
         // Set size
@@ -26,7 +37,7 @@ public partial class MainWindow : Gtk.Window {
 
         // Set window icon
         Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.Cyclone.png", 32, 32);
+                 "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);
         Icon = windowIcon;
 
         // Create uppermost container
@@ -45,6 +56,9 @@ public partial class MainWindow : Gtk.Window {
 
         Menu viewMenu = new Menu();
         MenuItem viewItem = new MenuItem("View");
+        
+        Menu helpMenu = new Menu();
+        MenuItem helpItem = new MenuItem("Help");
         
         AccelGroup accel = new AccelGroup();
         AddAccelGroup(accel);
@@ -69,19 +83,26 @@ public partial class MainWindow : Gtk.Window {
         changeView = new CheckMenuItem("Group by model");
         changeView.Toggle();
         
+        aboutItem = new MenuItem("About");
+        
         // Place button on menu, on bar
         fileMenu.Append(importItem);
         fileMenu.Append(exportItem);
         editMenu.Append(modelsItem);
         viewMenu.Append(changeView);
+        helpMenu.Append(aboutItem);
 
         fileItem.Submenu = fileMenu;
         editItem.Submenu = editMenu;
         viewItem.Submenu = viewMenu;
+        helpItem.Submenu = helpMenu;
 
         menuBar.Append(fileItem);
         menuBar.Append(editItem);
         menuBar.Append(viewItem);
+        menuBar.Append(helpItem);
+
+        aboutItem.Activated += aboutDialog;
 
         // Add menu bar to window
         windowList.PackStart(menuBar, false, false, 0);
@@ -90,11 +111,11 @@ public partial class MainWindow : Gtk.Window {
         Toolbar bikeToolbar = new Toolbar();
 
         Gdk.Pixbuf addBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.AddBike.png", 32, 32);
+                 "Cyclone.Assets.AddBike.png", ICON_SIDE, ICON_SIDE);
         Image addBikeImg = new Image(addBikeIcon);
 
         Gdk.Pixbuf removeBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.Close.png", 32, 32);
+                 "Cyclone.Assets.Close.png", ICON_SIDE, ICON_SIDE);
         Image removeBikeImg = new Image(removeBikeIcon);
         
         addBikeButton = new ToolButton(addBikeImg, "Add Bike");
@@ -135,18 +156,12 @@ public partial class MainWindow : Gtk.Window {
         // Toggle selection cell renderer
         CellRendererToggle selectBikes = new CellRendererToggle();
         selectBikes.Activatable = true;
-        
-        // Edit row cell renderer
-        CellRendererPixbuf editCell = new CellRendererPixbuf();
-        Gdk.Pixbuf editIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.edit.png", 32, 32);
-        editCell.Pixbuf = editIcon;
 
         // Construct columns of tree
-        bikeTree.AppendColumn("Make", new CellRendererText(), "text", 1);
-        bikeTree.AppendColumn("Model", new CellRendererText(), "text", 2);
-        bikeTree.AppendColumn("Year", new CellRendererText(), "text", 3);
-        bikeTree.AppendColumn("Type", new CellRendererText(), "text", 4);     
+        bikeTree.AppendColumn("Make", new CellRendererText(), "text", STORE_MAKE_P);
+        bikeTree.AppendColumn("Model", new CellRendererText(), "text", STORE_MODEL_P);
+        bikeTree.AppendColumn("Year", new CellRendererText(), "text", STORE_YEAR_P);
+        bikeTree.AppendColumn("Type", new CellRendererText(), "text", STORE_TYPE_P);     
         //bikeTree.AppendColumn("Actions", editCell);
 
         bikeTree.CanFocus = true;
@@ -160,11 +175,8 @@ public partial class MainWindow : Gtk.Window {
             column.Resizable = true;
             column.Clickable = true;
             column.SortColumnId = colCounter;
+            column.Expand = true;
 
-            // Don't add sort mechanism to selecting column (which is the first one)
-            if (colCounter > 0) {
-                column.Expand = true;
-            }
             colCounter++;
         }
         
@@ -203,8 +215,12 @@ public partial class MainWindow : Gtk.Window {
         about.Copyright = "(c) Sánchez Industries";
         about.Comments = @"Inventory manager for bike rental business";
         about.Website = "http://rusos.uk";
-        about.Logo = new Gdk.Pixbuf("battery.png");
+        
+        Gdk.Pixbuf aboutIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+            "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);
+        about.Logo = aboutIcon;
         about.Run();
+        
         about.Destroy();
     }
 }

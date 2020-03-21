@@ -107,12 +107,13 @@
       <LogicalName>gui.stetic</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="Assets\Cyclone.png" />
-    <EmbeddedResource Include="Assets\edit.png" />
     <EmbeddedResource Include="Assets\AddBike.png" />
     <EmbeddedResource Include="Assets\Bike.png" />
     <EmbeddedResource Include="Assets\Delete.png" />
     <EmbeddedResource Include="Assets\Close.png" />
     <EmbeddedResource Include="Assets\Bike_Yellow.png" />
+    <EmbeddedResource Include="Assets\Edit.png" />
+    <EmbeddedResource Include="Assets\Add_2.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

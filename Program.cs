@@ -31,6 +31,8 @@ namespace Cyclone {
 
         public const string baseInventory = "inventory.txt";
         public const string baseModels = "bikemake.txt";
+        public const string expandKey = "_expanded";
+        public const string groupedKey = "_grouped";
         
         static TreeStore modelStore;
         static TreeStore bikeStore;
@@ -149,7 +151,7 @@ namespace Cyclone {
                     TreeIter rowIter;
     
                     if (activeStore.GetIter(out rowIter, bikeRow)) {
-                        int rowType =  (int) activeStore.GetValue(rowIter, 0);
+                        int rowType =  (int) activeStore.GetValue(rowIter, ROW_T_P);
 
                         if (rowType == BIKE_DEPTH) {
                             // Get reference code and delete from both stores
@@ -179,14 +181,12 @@ namespace Cyclone {
             md.Destroy();
         }
 
-        
-
         private static void rowActivate(object o, RowActivatedArgs args, MainWindow mainWindow) {
             TreeIter rowActive;
             TreeStore activeStore = (TreeStore) mainWindow.bikeTree.Model;
             activeStore.GetIter(out rowActive, args.Path);
 
-            int rowType = activeStore.IterDepth(rowActive);
+            int rowType = (int) activeStore.GetValue(rowActive, ROW_T_P);
 
             if (rowType == BIKE_DEPTH) {
                 string make = (string) activeStore.GetValue(rowActive, STORE_MAKE_P);
@@ -215,9 +215,10 @@ namespace Cyclone {
         private static void createBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor bikeWin) {
             try {
                 Bike newBike = bikeWin.getBike();
+                Console.WriteLine(string.Format("Adding bike of make {0} and model {1}", newBike.Make, newBike.Model));
                 
-                Dictionary<string, Dictionary<string, List<Bike>>> newBikeDict = new Dictionary<string, Dictionary<string, List<Bike>>> { 
-                    [newBike.Make] = {
+                Dictionary<string, Dictionary<string, List<Bike>>> newBikeDict = new Dictionary<string, Dictionary<string, List<Bike>>> {
+                    [newBike.Make] = new Dictionary<string, List<Bike>> {
                         [newBike.Model] = new List<Bike> {newBike}
                     }
                 };
@@ -240,8 +241,25 @@ namespace Cyclone {
         private static void editBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor editBikeWin, TreeIter rowActive) {
             try {
                 Bike newBike = editBikeWin.getBike();
-                bikeStore.SetValues(rowActive, false, newBike.Make,
-                    newBike.Model, newBike.Year, newBike.Type, newBike.WheelSize, newBike.Forks, null);
+                deleteElement(newBike.SecurityCode);
+                
+                 Dictionary<string, Dictionary<string, List<Bike>>> editedBike = new Dictionary<string, Dictionary<string, List<Bike>>> {
+                    [newBike.Make] = new Dictionary<string, List<Bike>> {
+                        [newBike.Model] = new List<Bike> {newBike}
+                    }
+                 };
+
+                populateBikeStore(editedBike);
+
+                /*TreeIter expIter = securityMap[newBike.SecurityCode][expandKey];
+                TreeIter groupIter = securityMap[newBike.SecurityCode][groupedKey];
+                
+                bikeStore.SetValues(groupIter, BIKE_DEPTH, newBike.Make,
+                    newBike.Model, newBike.Year, newBike.Type, newBike.WheelSize, newBike.Forks, newBike.SecurityCode);
+
+                bikeExpStore.SetValues(expIter, BIKE_DEPTH, newBike.Make,
+                    newBike.Model, newBike.Year, newBike.Type, newBike.WheelSize, newBike.Forks, newBike.SecurityCode);*/
+
             } catch (FormatException) {
                 int bikeError = editBikeWin.errorType;
 
@@ -283,7 +301,7 @@ namespace Cyclone {
                     populateBikeStore(newImportedInv);
                     int elementsAdded = bikeCount - oldBikeCount;
 
-                    Console.WriteLine(String.Format("Read {0} elements from file {1}", elementsAdded, importFileDialog.Name));
+                    Console.WriteLine(String.Format("Read {0} elements from file {1}", elementsAdded, importFilename));
                 } else {
                     throw new NotImplementedException();
                 }
@@ -351,7 +369,7 @@ namespace Cyclone {
             foreach (string make in bikeDict.Keys) {
                 // If bike store does not have that make yet, create it
                 if (!bikeMap.ContainsKey(make)) {
-                    TreeIter makeParent = bikeStore.AppendValues(0, make);
+                    TreeIter makeParent = bikeStore.AppendValues(MAKE_DEPTH, make);
                     bikeMap[make] = new Dictionary<string, TreeIter>{
                         ["_ownIter"] = makeParent
                     };
@@ -361,25 +379,30 @@ namespace Cyclone {
 
                 foreach (string model in bikeDict[make].Keys) {
                     if (!bikeMap[make].ContainsKey(model)) {
-                        TreeIter modelParent = bikeStore.AppendValues(makeIter, 1, make, model);
+                        TreeIter modelParent = bikeStore.AppendValues(makeIter, MODEL_DEPTH, make, model);
                         bikeMap[make][model] = modelParent;                    
                     }
 
                     TreeIter modelIter = bikeMap[make][model];
 
                     foreach (Bike bike in bikeDict[make][model]) {
-                        bikeCount++;
+                        if (!securityMap.ContainsKey(bike.SecurityCode)) {
+                            bikeCount++;
 
-                        TreeIter bikeChild = bikeStore.AppendValues(modelIter, BIKE_DEPTH, bike.Make, 
-                            bike.Model, bike.Year, bike.Type, bike.WheelSize, bike.Forks, bike.SecurityCode);
+                            TreeIter bikeChild = bikeStore.AppendValues(modelIter, BIKE_DEPTH, bike.Make,
+                                bike.Model, bike.Year, bike.Type, bike.WheelSize, bike.Forks, bike.SecurityCode);
 
-                        TreeIter expChild = bikeExpStore.AppendValues(BIKE_DEPTH, bike.Make, 
-                            bike.Model, bike.Year, bike.Type, bike.WheelSize, bike.Forks, bike.SecurityCode);
+                            TreeIter expChild = bikeExpStore.AppendValues(BIKE_DEPTH, bike.Make,
+                                bike.Model, bike.Year, bike.Type, bike.WheelSize, bike.Forks, bike.SecurityCode);
 
-                        securityMap[bike.SecurityCode] = new Dictionary<string, TreeIter> { 
-                            ["_grouped"] = bikeChild,
-                            ["_expanded"] = expChild
-                        };
+                            securityMap[bike.SecurityCode] = new Dictionary<string, TreeIter> {
+                                [groupedKey] = bikeChild,
+                                [expandKey] = expChild
+                            };
+                        } else {
+                            Console.WriteLine(string.Format("The bike with make {0}, model {1}, & code {2} could not be added because the code already exists", 
+                                bike.Make, bike.Model, bike.SecurityCode));
+                        }
                     }
                 }
             }
@@ -396,8 +419,12 @@ namespace Cyclone {
             // Recover parent before deletion
             TreeIter modelParent;
             bikeStore.IterParent(out modelParent, groupedElement);
-            string parentMake = (string) bikeStore.GetValue(modelParent, 1);
-            string parentModel = (string) bikeStore.GetValue(modelParent, 2);
+            string parentModel = (string) bikeStore.GetValue(modelParent, STORE_MODEL_P);
+
+            // Recover grandparent before deletion
+            TreeIter makeParent;
+            bikeStore.IterParent(out makeParent, modelParent);
+            string parentMake = (string) bikeStore.GetValue(makeParent, STORE_MAKE_P);
 
             // Decrease count now so that deleted event can update indicator accordingly
             bikeCount--;
@@ -413,6 +440,11 @@ namespace Cyclone {
             if (bikeStore.IterNChildren(modelParent) == 0) {
                 bikeStore.Remove(ref modelParent);
                 bikeMap[parentMake].Remove(parentModel);
+                
+                if (bikeStore.IterNChildren(makeParent) == 0) {
+                    bikeStore.Remove(ref makeParent);
+                    bikeMap.Remove(parentMake);
+                }
             }
         }
         
@@ -430,20 +462,6 @@ namespace Cyclone {
                 
                 // Send code to recover reference and so delete
                 deleteElement(secCode);
-            }
-            
-            // Save parent iter reference
-            TreeIter makeParent;
-            bikeStore.IterParent(out makeParent, modelIter);
-            string parentMake = (string) bikeStore.GetValue(makeParent, 1);
-            
-            // Remove model branch
-            bikeStore.Remove(ref modelIter);
-            
-            // Remove make parent if it is empty now
-            if (bikeStore.IterNChildren(makeParent) == 0) { 
-                bikeStore.Remove(ref makeParent);
-                bikeMap.Remove(parentMake);
             }
         }
         
