@@ -4,11 +4,14 @@ namespace Cyclone {
         private string _make;
         private string _type;
         private string _model;
+        private static int modelTotal;
         
         public BikeModel(string make, string type, string model) {
             Make = make;
             Type = type;
             Model = model;
+
+            modelTotal++;
         }
         
         public string Make {
@@ -39,6 +42,16 @@ namespace Cyclone {
             set {
                 _model = value;
             }
-        }    
+        }
+        
+        public static int ModelCount {
+            get {
+                return modelTotal;
+            }
+        }
+        
+        public static void removeBike() {
+            modelTotal--;
+        }
     }
 }

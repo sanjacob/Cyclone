@@ -1,7 +1,7 @@
 ﻿using System;
 using Gtk;
 namespace Cyclone {
-    public class ModelsEditor : Window {
+    public class ModelsViewer : Window {
         public const int WIN_W = 600;
         public const int WIN_H = 400;
         public const uint defPadding = 20;
@@ -23,7 +23,7 @@ namespace Cyclone {
         public ToolButton removeModelButton;
     
 
-        public ModelsEditor() : base (WindowType.Toplevel) {
+        public ModelsViewer() : base (WindowType.Toplevel) {
             SetDefaultSize(WIN_W, WIN_H);
             SetSizeRequest(WIN_W, WIN_H);
             //Resizable = false;

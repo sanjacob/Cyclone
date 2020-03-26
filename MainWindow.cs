@@ -211,10 +211,14 @@ public partial class MainWindow : Gtk.Window {
     void aboutDialog(object sender, EventArgs args) {
         AboutDialog about = new AboutDialog();
         about.ProgramName = "Cyclone";
-        about.Version = "0.01";
-        about.Copyright = "(c) Sánchez Industries";
+        about.Version = "0.1";
+        about.Copyright = "by Sánchez Industries";
         about.Comments = @"Inventory manager for bike rental business";
-        about.Website = "http://rusos.uk";
+        about.Website = "https://github.com/jacobszpz/Cyclone";
+        
+        Gdk.Pixbuf aboutWIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+            "Cyclone.Assets.Bike_Yellow.png", ICON_SIDE, ICON_SIDE);
+        about.Icon = aboutWIcon;
         
         Gdk.Pixbuf aboutIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
             "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);

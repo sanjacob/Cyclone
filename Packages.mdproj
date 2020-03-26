@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ItemType>PackagingProject</ItemType>
+    <ProjectGuid>{028809B5-D426-45F6-BAC4-2DEDC1F9120F}</ProjectGuid>
+    <Packages>
+      <Packages>
+        <Package>
+          <Builder>
+            <RootEntry>
+              <path>Cyclone.csproj</path>
+            </RootEntry>
+            <targetFile>Releases\Cyclone.zip</targetFile>
+            <format>MonoDevelop.Projects.MSBuild.MSBuildFileFormatVS12</format>
+            <ctype>SourcesZipPackageBuilder</ctype>
+          </Builder>
+          <name>MSBuild Sources</name>
+        </Package>
+      </Packages>
+    </Packages>
+  </PropertyGroup>
+</Project>

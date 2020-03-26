@@ -17,6 +17,7 @@ namespace Cyclone
         private string _forks;
         private int _securityCode;
         private double _cost;
+        private static int bikeTotal;
 
         public string Make
         {
@@ -118,6 +119,12 @@ namespace Cyclone
                 _cost = value;
             }
         }
+        
+        public static int BikeCount {
+            get {
+                return bikeTotal;
+            }
+        }
 
         public Bike() { }
 
@@ -130,6 +137,12 @@ namespace Cyclone
             WheelSize = wheelSize;
             Forks = forks;
             SecurityCode = securityCode;
+
+            bikeTotal++;
+        }
+        
+        public static void removeBike() {
+            bikeTotal--;
         }
     }
 }
