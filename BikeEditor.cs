@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Gtk;
 namespace Cyclone {
     public class BikeEditor : ModelEditor {
@@ -8,6 +10,7 @@ namespace Cyclone {
         private const int MIN_YEAR = 1200;
         private const int FUTURE_MARGIN = 10;
         public const int ERROR_YEAR = 1;
+        public const int ERROR_CODE = 3;
 
         public Bike savedBike;
      
@@ -71,18 +74,32 @@ namespace Cyclone {
             fields.Attach(codeWidget, ENTRY_COL, ENTRY_END, 6, 7, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
         }
 
-        public Bike getBike() {
+        public Bike getBike(Dictionary<string, List<string>> modelsDict) {
 
+            int parseCode;
             int bikeYearTry;
             bool yearValid = int.TryParse(bikeYear.Text, out bikeYearTry);
             yearValid = yearValid && (bikeYearTry < (DateTime.Now.Year + FUTURE_MARGIN)) && (bikeYearTry > MIN_YEAR);
 
-            bool fieldsEmpty = string.IsNullOrWhiteSpace(bikeMake.Text) || string.IsNullOrWhiteSpace(bikeModel.Text)
-             || string.IsNullOrWhiteSpace(bikeYear.Text) || string.IsNullOrWhiteSpace(bikeType.Text)
-             || string.IsNullOrWhiteSpace(bikeWheels.Text) || string.IsNullOrWhiteSpace(bikeForks.Text);
-             
+            bool fieldsEmpty = string.IsNullOrWhiteSpace(bikeYear.Text)
+             || string.IsNullOrWhiteSpace(bikeWheels.Text) 
+             || string.IsNullOrWhiteSpace(bikeForks.Text);
+
+            int makeSelected = bikeMakeC.Active;
+            int modelSelected = bikeModelC.Active;
+
+            fieldsEmpty = fieldsEmpty
+             || makeSelected == -1
+             || modelSelected == -1;
+
+            parseCode = securityCode;
             if (!codeDisplay) {
+                bool codeParsed = int.TryParse(bikeCode.Text, out parseCode);
                 fieldsEmpty = fieldsEmpty || string.IsNullOrWhiteSpace(bikeCode.Text);
+                
+                if (!codeParsed) {
+                    errorType = ERROR_CODE;
+                }
             }
 
             if (fieldsEmpty) {
@@ -90,28 +107,40 @@ namespace Cyclone {
             } if (!yearValid) {
                errorType = ERROR_YEAR;
             }
-            
+
             if (securityCode == 0) {
 
             }
 
             if (errorType != ERROR_NONE) { 
                 throw new FormatException();
-            } 
+            }
             
-            savedBike = new Bike(bikeMake.Text, bikeType.Text, bikeModel.Text, bikeYearTry, bikeWheels.Text, bikeForks.Text, securityCode);
+            string[] makeArray = modelsDict.Keys.ToArray();
+            string makeParsed = makeArray[makeSelected];
+
+            string[] currentModels = modelsDict[makeParsed].ToArray();
+            string modelParsed = currentModels[modelSelected];
+            
+            savedBike = new Bike(makeParsed, type, modelParsed, bikeYearTry, bikeWheels.Text, bikeForks.Text, parseCode);
             return savedBike;
         }
-        
+
         protected override uint EDITOR_ROWS {
             get {
                 return _EDITOR_ROWS;
             }
         }
-        
+
         protected override uint SAVE_START {
             get {
                 return _SAVE_START;
+            }
+        }
+
+        protected override bool entryEnabled {
+            get {
+                return false;
             }
         }
     }

@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using Gtk;
 
-public partial class MainWindow : Gtk.Window {
+public partial class MainWindow : Window {
     public TreeView bikeTree;
     public ImageMenuItem importItem;
     public ImageMenuItem exportItem;
     public MenuItem modelsItem;
+    public MenuItem clearItem;
     public CheckMenuItem changeView;
     public MenuItem aboutItem;
 
@@ -79,6 +80,7 @@ public partial class MainWindow : Gtk.Window {
             new AccelKey(Gdk.Key.e, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
 
         modelsItem = new MenuItem("Valid Bike Models");
+        clearItem = new MenuItem("Clear Inventory");
 
         changeView = new CheckMenuItem("Group by model");
         changeView.Toggle();
@@ -89,6 +91,7 @@ public partial class MainWindow : Gtk.Window {
         fileMenu.Append(importItem);
         fileMenu.Append(exportItem);
         editMenu.Append(modelsItem);
+        editMenu.Append(clearItem);
         viewMenu.Append(changeView);
         helpMenu.Append(aboutItem);
 
@@ -204,6 +207,19 @@ public partial class MainWindow : Gtk.Window {
     }
     
     protected void OnDeleteEvent(object sender, DeleteEventArgs a) {
+        string confMsg = string.Format( "Do you wish to save the inventory?");
+
+        MessageDialog saveConfirm = new MessageDialog (this,  
+            DialogFlags.DestroyWithParent, 
+            MessageType.Question, 
+            ButtonsType.YesNo, confMsg);
+
+        ResponseType result = (ResponseType) saveConfirm.Run ();
+
+        if (result == ResponseType.Yes) {
+            
+        }
+        
         Application.Quit();
         a.RetVal = true;
     }
@@ -211,7 +227,7 @@ public partial class MainWindow : Gtk.Window {
     void aboutDialog(object sender, EventArgs args) {
         AboutDialog about = new AboutDialog();
         about.ProgramName = "Cyclone";
-        about.Version = "0.1";
+        about.Version = "0.2";
         about.Copyright = "by Sánchez Industries";
         about.Comments = @"Inventory manager for bike rental business";
         about.Website = "https://github.com/jacobszpz/Cyclone";

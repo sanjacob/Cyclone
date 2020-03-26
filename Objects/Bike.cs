@@ -141,8 +141,8 @@ namespace Cyclone
             bikeTotal++;
         }
         
-        public static void removeBike() {
-            bikeTotal--;
+        public static void removeBike(int amount = 1) {
+            bikeTotal -= amount;
         }
     }
 }
