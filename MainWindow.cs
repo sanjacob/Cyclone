@@ -1,37 +1,79 @@
 ﻿using System;
 using System.Collections.Generic;
 using Gtk;
+using Cyclone;
 
+/// <summary>
+/// Main window for Cyclone app.
+/// </summary>
 public partial class MainWindow : Window {
+    private VBox windowBox;
+    public MainMenu mainMenu;
+    public MainTools bikeToolbar;
     public TreeView bikeTree;
-    public ImageMenuItem importItem;
-    public ImageMenuItem exportItem;
-    public MenuItem modelsItem;
-    public MenuItem clearItem;
-    public CheckMenuItem changeView;
-    public MenuItem aboutItem;
-
-    public bool allSelected = false;
     public Label bikeAmount;
-
-    public ToolButton addBikeButton;
-    public ToolButton removeBikeButton;
 
     public const uint defPadding = 20;
     public const int WIN_W = 800;
     public const int WIN_H = 500;
     public const int ICON_SIDE = 32;
-    
+
     public const int ICON_H = 42;
     public const int ICON_W = 38;
-    
+
     public const int STORE_MAKE_P = 1;
     public const int STORE_MODEL_P = 2;
     public const int STORE_TYPE_P = 4;
     public const int STORE_YEAR_P = 3;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="T:MainWindow"/> class.
+    /// </summary>
+    public MainWindow() : base(WindowType.Toplevel) {
+        WindowProperties();
 
-    public MainWindow() : base(Gtk.WindowType.Toplevel) {
+        // Create menu bar
+        mainMenu = new MainMenu();
+        AddAccelGroup(mainMenu.fileAccel);
+        mainMenu.aboutItem.Activated += AboutDialog;
+
+        // Create toolbar and add it to window
+        bikeToolbar = new MainTools();
+
+        Separator toolSeparator = new Separator(Orientation.Horizontal);
+
+        Statusbar statusbar = new Statusbar();
+        bikeAmount = new Label("0 bikes in inventory");
+        statusbar.PackEnd(bikeAmount, false, true, 0);
+
+        // Create frame, set border
+        Frame mainFrame = new Frame("Bike Inventory");
+        // mainFrame.BorderWidth = defPadding;
+        mainFrame.MarginTop = (int)defPadding / 2;
+        mainFrame.MarginBottom = mainFrame.MarginLeft =
+            mainFrame.MarginRight = (int)defPadding;
+
+        // Create scroller inside frame
+        ScrolledWindow scrollWindow = new ScrolledWindow();
+        mainFrame.Add(scrollWindow);
+
+        // Tree View
+        bikeTree = new MainTree();
+        scrollWindow.Add(bikeTree);
+
+        // Add all elements to window vertical container
+        windowBox.PackStart(mainMenu, false, false, 0);
+        windowBox.PackStart(bikeToolbar, false, false, 0);
+        windowBox.PackStart(toolSeparator, false, false, 0);
+
+        windowBox.PackEnd(statusbar, false, false, 0);
+        windowBox.PackEnd(mainFrame, true, true, 0);
+    }
+
+    /// <summary>
+    /// Sets the window properties, size and icon.
+    /// </summary>
+    private void WindowProperties() {
         // Set size
         SetDefaultSize(WIN_W, WIN_H);
         SetSizeRequest(WIN_W, WIN_H);
@@ -42,205 +84,278 @@ public partial class MainWindow : Window {
         Icon = windowIcon;
 
         // Create uppermost container
-        VBox windowList = new VBox(false, 0);
-        Add(windowList);
-
-        // Create menu bar
-        MenuBar menuBar = new MenuBar();
-        
-        // Create tabs of menu
-        Menu fileMenu = new Menu();
-        MenuItem fileItem = new MenuItem("File");
-        
-        Menu editMenu = new Menu();
-        MenuItem editItem = new MenuItem("Edit");
-
-        Menu viewMenu = new Menu();
-        MenuItem viewItem = new MenuItem("View");
-        
-        Menu helpMenu = new Menu();
-        MenuItem helpItem = new MenuItem("Help");
-        
-        AccelGroup accel = new AccelGroup();
-        AddAccelGroup(accel);
-
-        // Create 'Import' button on 'File'
-        importItem = new ImageMenuItem(Stock.Add, accel) {
-            Label = "Import"
-        };
-        
-        importItem.AddAccelerator("activate", accel,
-            new AccelKey(Gdk.Key.i, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
-
-        // Create 'Export' button on 'File'
-        exportItem = new ImageMenuItem(Stock.SaveAs, accel) {
-            Label = "Export"
-        };
-        exportItem.AddAccelerator("activate", accel,
-            new AccelKey(Gdk.Key.e, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
-
-        modelsItem = new MenuItem("Valid Bike Models");
-        clearItem = new MenuItem("Clear Inventory");
-
-        changeView = new CheckMenuItem("Group by model");
-        changeView.Toggle();
-        
-        aboutItem = new MenuItem("About");
-        
-        // Place button on menu, on bar
-        fileMenu.Append(importItem);
-        fileMenu.Append(exportItem);
-        editMenu.Append(modelsItem);
-        editMenu.Append(clearItem);
-        viewMenu.Append(changeView);
-        helpMenu.Append(aboutItem);
-
-        fileItem.Submenu = fileMenu;
-        editItem.Submenu = editMenu;
-        viewItem.Submenu = viewMenu;
-        helpItem.Submenu = helpMenu;
-
-        menuBar.Append(fileItem);
-        menuBar.Append(editItem);
-        menuBar.Append(viewItem);
-        menuBar.Append(helpItem);
-
-        aboutItem.Activated += aboutDialog;
-
-        // Add menu bar to window
-        windowList.PackStart(menuBar, false, false, 0);
-
-        // Create toolbar and add it to window
-        Toolbar bikeToolbar = new Toolbar();
-
-        Gdk.Pixbuf addBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.AddBike.png", ICON_SIDE, ICON_SIDE);
-        Image addBikeImg = new Image(addBikeIcon);
-
-        Gdk.Pixbuf removeBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                 "Cyclone.Assets.Close.png", ICON_SIDE, ICON_SIDE);
-        Image removeBikeImg = new Image(removeBikeIcon);
-        
-        addBikeButton = new ToolButton(addBikeImg, "Add Bike");
-        removeBikeButton = new ToolButton(removeBikeImg, "Remove Bike");
-       
-        bikeToolbar.Insert(addBikeButton, 0);
-        bikeToolbar.Insert(removeBikeButton, 1);
-        windowList.PackStart(bikeToolbar, false, false, 0);
-
-        Separator toolSeparator = new Separator(Orientation.Horizontal);
-        windowList.PackStart(toolSeparator, false, false, 0);
-
-        Statusbar statusbar = new Statusbar();
-        bikeAmount = new Label("0 bikes in inventory");
-        statusbar.PackEnd(bikeAmount, false, true, 0);
-
-        windowList.PackEnd(statusbar, false, false, 0);
-
-        // Create frame, set border
-        Frame mainFrame = new Frame("Bike Inventory");
-        // mainFrame.BorderWidth = defPadding;
-        mainFrame.MarginBottom = mainFrame.MarginLeft = 
-            mainFrame.MarginRight = (int) defPadding;
-        mainFrame.MarginTop = (int) defPadding / 2;
-
-        // Create scroller inside frame
-        ScrolledWindow scrollWindow = new ScrolledWindow();
-        mainFrame.Add(scrollWindow);
-        
-        // Add frame to window
-        windowList.PackEnd(mainFrame, true, true, 0);
-
-        // Tree View
-        bikeTree = new TreeView();
-        bikeTree.HeadersVisible = true;
-        bikeTree.EnableGridLines = TreeViewGridLines.Both;
-
-        // Toggle selection cell renderer
-        CellRendererToggle selectBikes = new CellRendererToggle();
-        selectBikes.Activatable = true;
-
-        // Construct columns of tree
-        bikeTree.AppendColumn("Make", new CellRendererText(), "text", STORE_MAKE_P);
-        bikeTree.AppendColumn("Model", new CellRendererText(), "text", STORE_MODEL_P);
-        bikeTree.AppendColumn("Year", new CellRendererText(), "text", STORE_YEAR_P);
-        bikeTree.AppendColumn("Type", new CellRendererText(), "text", STORE_TYPE_P);     
-        //bikeTree.AppendColumn("Actions", editCell);
-
-        bikeTree.CanFocus = true;
-        bikeTree.Selection.Mode = SelectionMode.Multiple;
-        bikeTree.Selection.Changed += changeRowSelection;
-
-        // Set attributes for all columns
-        int colCounter = 1;
-
-        foreach (TreeViewColumn column in bikeTree.Columns) {
-            column.Resizable = true;
-            column.Clickable = true;
-            column.SortColumnId = colCounter;
-            column.Expand = true;
-
-            colCounter++;
-        }
-        
-        // Add tree to scrollable
-        scrollWindow.Add(bikeTree);
-
-        // Attach the label over the entire first row
-
-        //Icon = Properties.Resources.RedIcon;
-        Build();
+        windowBox = new VBox(false, 0);
+        Add(windowBox);
     }
 
-    private void changeRowSelection(object sender, EventArgs e) {
-            Console.WriteLine(String.Format("{0} rows are selected", bikeTree.Selection.GetSelectedRows().Length));
-            TreePath[] newSelection = bikeTree.Selection.GetSelectedRows();
-    }
-
-    private void selectAll(object sender, EventArgs e) {
-         bikeTree.Selection.UnselectAll();
-        if (!allSelected) {
-            bikeTree.Selection.SelectAll();
-        }
-
-        allSelected = !allSelected;
-    }
-    
+    /// <summary>
+    /// Handles the delete event.
+    /// </summary>
+    /// <param name="sender">Sender.</param>
+    /// <param name="a">The alpha component.</param>
     protected void OnDeleteEvent(object sender, DeleteEventArgs a) {
-        string confMsg = string.Format( "Do you wish to save the inventory?");
+        string confMsg = string.Format("Do you wish to save the inventory?");
 
-        MessageDialog saveConfirm = new MessageDialog (this,  
-            DialogFlags.DestroyWithParent, 
-            MessageType.Question, 
+        MessageDialog saveConfirm = new MessageDialog(this,
+            DialogFlags.DestroyWithParent,
+            MessageType.Question,
             ButtonsType.YesNo, confMsg);
 
-        ResponseType result = (ResponseType) saveConfirm.Run ();
+        ResponseType result = (ResponseType)saveConfirm.Run();
 
         if (result == ResponseType.Yes) {
-            
+
         }
-        
+
         Application.Quit();
         a.RetVal = true;
     }
 
-    void aboutDialog(object sender, EventArgs args) {
-        AboutDialog about = new AboutDialog();
-        about.ProgramName = "Cyclone";
-        about.Version = "0.2";
-        about.Copyright = "by Sánchez Industries";
-        about.Comments = @"Inventory manager for bike rental business";
-        about.Website = "https://github.com/jacobszpz/Cyclone";
-        
-        Gdk.Pixbuf aboutWIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-            "Cyclone.Assets.Bike_Yellow.png", ICON_SIDE, ICON_SIDE);
-        about.Icon = aboutWIcon;
-        
-        Gdk.Pixbuf aboutIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-            "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);
-        about.Logo = aboutIcon;
+    /// <summary>
+    /// Shows the About dialog.
+    /// </summary>
+    /// <param name="sender">Sender.</param>
+    /// <param name="args">Arguments.</param>
+    void AboutDialog(object sender, EventArgs args) {
+        AboutDialog about = new MainAbout();
         about.Run();
-        
         about.Destroy();
+    }
+
+    /// <summary>
+    /// Updates the bike count.
+    /// </summary>
+    public void BikeCount() {
+        BikeAmount = Bike.BikeCount;
+    }
+
+    public int BikeAmount {
+        set {
+            string pluralNoun = "s";
+    
+            if (value == 1) {
+                pluralNoun = "";
+            }
+    
+            bikeAmount.Text = string.Format("{0} model{1} in inventory", value, pluralNoun);    
+        }
+    }
+
+    /// <summary>
+    /// Simplify error sending.
+    /// </summary>
+    /// <param name="errorMsg">Error message.</param>
+    public void SendError(string errorMsg) {
+        MessageDialog yearError = new MessageDialog(this,
+            DialogFlags.DestroyWithParent,
+            MessageType.Error,
+            ButtonsType.Close, errorMsg);
+
+        ResponseType yearRes = (ResponseType) yearError.Run();
+
+        if (yearRes == ResponseType.Close) {
+            yearError.Destroy();
+        }
+    }
+
+    /// <summary>
+    /// Class for the menu bar.
+    /// </summary>
+    public class MainMenu : MenuBar {
+        public ImageMenuItem importItem;
+        public ImageMenuItem exportItem;
+        public MenuItem modelsItem;
+        public MenuItem clearItem;
+        public CheckMenuItem changeView;
+        public MenuItem aboutItem;
+
+        public AccelGroup fileAccel;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="T:MainWindow.MainMenu"/> class.
+        /// </summary>
+        public MainMenu() {
+            Append(FileMenu);
+            Append(EditMenu);
+            Append(ViewMenu);
+            Append(HelpMenu);
+        }
+
+        /// <summary>
+        /// Builds the file menu.
+        /// </summary>
+        /// <value>The file menu.</value>
+        MenuItem FileMenu {
+            get {
+                MenuItem fileItem = new MenuItem("File");
+                Menu fileMenu = new Menu();
+
+                // File Tab
+                fileAccel = new AccelGroup();
+
+                // Create 'Import' button on 'File'
+                importItem = new ImageMenuItem(Stock.Add, fileAccel) {
+                    Label = "Import"
+                };
+
+                // Create 'Export' button on 'File'
+                exportItem = new ImageMenuItem(Stock.SaveAs, fileAccel) {
+                    Label = "Export"
+                };
+
+                importItem.AddAccelerator("activate", fileAccel,
+                    new AccelKey(Gdk.Key.i, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
+                exportItem.AddAccelerator("activate", fileAccel,
+                    new AccelKey(Gdk.Key.e, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
+
+                // Append all items to each tab
+                fileMenu.Append(importItem);
+                fileMenu.Append(exportItem);
+                fileItem.Submenu = fileMenu;
+
+                return fileItem;
+            }
+        }
+
+        /// <summary>
+        /// Builds the edit menu.
+        /// </summary>
+        /// <value>The edit menu.</value>
+        MenuItem EditMenu {
+            get {
+                MenuItem editItem = new MenuItem("Edit");
+                Menu editMenu = new Menu();
+
+                // Edit Tab
+                modelsItem = new MenuItem("Valid Bike Models");
+                clearItem = new MenuItem("Clear Inventory");
+
+                editMenu.Append(modelsItem);
+                editMenu.Append(clearItem);
+                editItem.Submenu = editMenu;
+
+                return editItem;
+            }
+        }
+
+        /// <summary>
+        /// Builds the view menu.
+        /// </summary>
+        /// <value>The view menu.</value>
+        MenuItem ViewMenu {
+            get {
+                MenuItem viewItem = new MenuItem("View");
+                Menu viewMenu = new Menu();
+
+                // View Tab
+                changeView = new CheckMenuItem("Group by model");
+                changeView.Toggle();
+
+                viewMenu.Append(changeView);
+                viewItem.Submenu = viewMenu;
+
+                return viewItem;
+            }
+        }
+
+        /// <summary>
+        /// Builds the help menu.
+        /// </summary>
+        /// <value>The help menu.</value>
+        MenuItem HelpMenu {
+            get {
+                MenuItem helpItem = new MenuItem("Help");
+                Menu helpMenu = new Menu();
+
+                // Help Tab
+                aboutItem = new MenuItem("About");
+
+                helpMenu.Append(aboutItem);
+                helpItem.Submenu = helpMenu;
+
+                return helpItem;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds main toolbar.
+    /// </summary>
+    public class MainTools : Toolbar {
+        public ToolButton addBikeButton;
+        public ToolButton removeBikeButton;
+
+        public MainTools() {
+            Gdk.Pixbuf addBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.AddBike.png", ICON_SIDE, ICON_SIDE);
+            Image addBikeImg = new Image(addBikeIcon);
+
+            Gdk.Pixbuf removeBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.Close.png", ICON_SIDE, ICON_SIDE);
+            Image removeBikeImg = new Image(removeBikeIcon);
+
+            addBikeButton = new ToolButton(addBikeImg, "Add Bike");
+            removeBikeButton = new ToolButton(removeBikeImg, "Remove Bike");
+
+            Insert(addBikeButton, 0);
+            Insert(removeBikeButton, 1);
+        }
+    }
+
+    /// <summary>
+    /// Builds main treeview.
+    /// </summary>
+    public class MainTree : TreeView {
+        public MainTree() {
+            HeadersVisible = true;
+            EnableGridLines = TreeViewGridLines.Both;
+
+            // Toggle selection cell renderer
+            CellRendererToggle selectBikes = new CellRendererToggle();
+            selectBikes.Activatable = true;
+
+            // Construct columns of tree
+            AppendColumn("Make", new CellRendererText(), "text", STORE_MAKE_P);
+            AppendColumn("Model", new CellRendererText(), "text", STORE_MODEL_P);
+            AppendColumn("Year", new CellRendererText(), "text", STORE_YEAR_P);
+            AppendColumn("Type", new CellRendererText(), "text", STORE_TYPE_P);
+            //bikeTree.AppendColumn("Actions", editCell);
+
+            CanFocus = true;
+            Selection.Mode = SelectionMode.Multiple;
+
+            // Set attributes for all columns
+            int colCounter = 1;
+
+            foreach (TreeViewColumn column in Columns) {
+                column.Resizable = true;
+                column.Clickable = true;
+                column.SortColumnId = colCounter;
+                column.Expand = true;
+
+                colCounter++;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Builds about dialog.
+    /// </summary>
+    private class MainAbout : AboutDialog {
+        public MainAbout() {
+            ProgramName = "Cyclone";
+            Version = "0.3";
+            Copyright = "by Sánchez Industries";
+            Comments = @"Inventory manager for bike rental business";
+            Website = "https://github.com/jacobszpz/Cyclone";
+
+            Gdk.Pixbuf aboutWIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.Bike_Yellow.png", ICON_SIDE, ICON_SIDE);
+            Icon = aboutWIcon;
+
+            Gdk.Pixbuf aboutIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);
+            Logo = aboutIcon;
+        }
     }
 }
