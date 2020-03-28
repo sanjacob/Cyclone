@@ -3,7 +3,7 @@ namespace Cyclone {
     /// <summary>
     /// Bike model class.
     /// </summary>
-    public class BikeModel {
+    public class BikeModel : IEquatable<BikeModel> {
         private string _make;
         private string _type;
         private string _model;
@@ -82,6 +82,15 @@ namespace Cyclone {
         /// </summary>
         public static void RemoveModel() {
             modelTotal--;
+        }
+
+        public bool Equals(BikeModel other) {
+            if (other == null) return false;
+
+            bool makeEqual = Make.Equals(other.Make);
+            bool modelEqual = Model.Equals(other.Model);
+            bool typeEqual = Type.Equals(other.Type);
+            return (makeEqual && modelEqual && typeEqual);
         }
     }
 }

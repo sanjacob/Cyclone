@@ -68,7 +68,7 @@ namespace Cyclone {
         }
 
         public BikeModel ParseModel() {
-            BikeModel editedModel = new BikeModel(MakeEdit, ModelEdit, TypeEdit);
+            BikeModel editedModel = new BikeModel(MakeEdit, TypeEdit, ModelEdit);
             return editedModel;
         }
 

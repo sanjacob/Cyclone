@@ -339,10 +339,7 @@ namespace Cyclone {
                 RepopulateModelTree(validModels);
             } catch (FormatException) {
                 int modelError = modelWin.errorType;
-
-                if (modelError == ModelEditor.ERROR_EMPTY) {
-                    mainWindow.SendError("Please fill in all mandatory fields");
-                }
+                mainWindow.SendError("Please fill in all mandatory fields");
             }
 
             modelWin.Destroy();
@@ -532,7 +529,7 @@ namespace Cyclone {
                 string model = (string) modelStore.GetValue(rowActive, MODEL_MODEL_P);
                 string type = (string) modelStore.GetValue(rowActive, MODEL_TYPE_P);
 
-                BikeModel oldModel = new BikeModel(make, model, type, true);
+                BikeModel oldModel = new BikeModel(make, type, model, true);
                 ModelEditor editModelWin = new ModelEditor(oldModel);
 
                 editModelWin.ShowAll();
@@ -561,7 +558,7 @@ namespace Cyclone {
 
                 if (bikeError == BikeEditor.ERROR_YEAR) {
                     mainWindow.SendError("Please enter a valid year");
-                } else if (bikeError == ModelEditor.ERROR_EMPTY) {
+                } else {
                     mainWindow.SendError("Please fill in all mandatory fields");
                 }
             } catch (IndexOutOfRangeException) { 
@@ -588,10 +585,7 @@ namespace Cyclone {
 
             } catch (FormatException) {
                 int bikeError = editModelWin.errorType;
-
-                if (bikeError == ModelEditor.ERROR_EMPTY) {
-                    modelsWindow.SendError("Please fill in all mandatory fields");
-                }
+                modelsWindow.SendError("Please fill in all mandatory fields");
             } finally {
                 editModelWin.Destroy();
             }
