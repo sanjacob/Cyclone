@@ -4,6 +4,16 @@ using System.Linq;
 using Gtk;
 namespace Cyclone {
     public class BikeEditor : ModelEditor {
+        private ComboBox makeCombo;
+        private ComboBox modelCombo;
+        private Label typeLabel;
+
+        private CellRendererText ComboCell = new CellRendererText();
+        private ListStore makeStore;
+        private ListStore modelStore;
+
+        public Dictionary<string, List<BikeModel>> comboModels = new Dictionary<string, List<BikeModel>>();
+
         private uint _SAVE_START = 8;
         private uint _EDITOR_ROWS = 10;
 
@@ -12,118 +22,109 @@ namespace Cyclone {
         public const int ERROR_YEAR = 1;
         public const int ERROR_CODE = 3;
 
-        public Bike savedBike;
-     
-        public Entry bikeYear;
-        public Entry bikeWheels;
-        public Entry bikeForks;
-        public Entry bikeCode;
-        public Label bikeCodeDisp;
+        public Entry yearEntry;
+        public Entry wheelsEntry;
+        public Entry forksEntry;
+        public Entry codeEntry;
+        public Label codeDisp;
 
-        private int securityCode;
+        private int currentCode;
         private bool codeDisplay;
 
-        public BikeEditor() {
+        public BikeEditor(Dictionary<string, List<BikeModel>> validModels) {
+            comboModels = validModels;
             createBikeEditor();
             Title = "Create bike";
         }
-        
-        public BikeEditor(string make, string model, int year, string type, string wheelSize, string forks, int code) {
+
+        public BikeEditor(Dictionary<string, List<BikeModel>> validModels, 
+            string make, string model, int year, string type, string wheelSize, string forks, int code) {
+
+            comboModels = validModels;
             codeDisplay = true;
             createBikeEditor();
 
             Title = "Modify bike";
-            bikeMake.Text = make;
-            bikeModel.Text = model;
-            bikeYear.Text = year.ToString();
-            bikeType.Text = type;
-            bikeWheels.Text = wheelSize;
-            bikeForks.Text = forks;
-            bikeCodeDisp.Text = code.ToString();
+            MakeEdit = make;
+            ModelEdit = model;
+            TypeEdit = type;
 
-            securityCode = code;
+            YearEdit = year;
+            WheelSizeEdit = wheelSize;
+            ForksEdit = forks;
+            CodeEdit = code;
+
+            currentCode = code;
         }
-        
+
         public void createBikeEditor() {
+            BuildTable();
+            makeStore.Clear();
+
+            foreach (string make in comboModels.Keys) {
+                makeStore.AppendValues(make);
+            }
+
+            makeCombo.Changed += populateModelCombo;
+            modelCombo.Changed += updateBikeType;
+        }
+
+        private void updateBikeType(object sender, EventArgs e) {
+            List<BikeModel> availableModels = comboModels[MakeEdit];
+            if (modelCombo.Active != -1) {
+                typeLabel.Text = availableModels[modelCombo.Active].Type;
+            }
+        }
+
+        private void populateModelCombo(object sender, EventArgs e) {
+            List<BikeModel> availableModels = comboModels[MakeEdit];
+            modelStore.Clear();
+            typeLabel.Text = "";
+
+            foreach (BikeModel validModel in availableModels) {
+                modelStore.AppendValues(validModel.Model);
+            }
+        }
+
+        public Bike ParseBike() {
+            int SecurityCode = currentCode;
+
+            if (!codeDisplay) {
+                SecurityCode = CodeEdit;
+            }
+
+            Bike savedBike = new Bike(MakeEdit, TypeEdit, ModelEdit, YearEdit, WheelSizeEdit, ForksEdit, SecurityCode);
+            return savedBike;
+        }
+
+        private void BuildTable() {
             Label yearLabel = new Label("Year: ");
             Label wheelLabel = new Label("Wheel Size: ");
             Label forksLabel = new Label("Forks: ");
             Label priceLabel = new Label("Retail Price: ");
             Label codeLabel = new Label("Security Code: ");
 
-            bikeYear = new Entry();
-            bikeWheels = new Entry();
-            bikeForks = new Entry();
-            bikeCode = new Entry();
-            bikeCodeDisp = new Label();
+            yearEntry = new Entry();
+            wheelsEntry = new Entry();
+            forksEntry = new Entry();
+            codeEntry = new Entry();
+            codeDisp = new Label();
             
-            Widget codeWidget = bikeCode;
+            Widget codeWidget = codeEntry;
             
             if (codeDisplay) {
-                codeWidget = bikeCodeDisp;
+                codeWidget = codeDisp;
             }
 
-            fields.Attach(yearLabel, LABEL_COL, LABEL_END, 3, 4, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(wheelLabel, LABEL_COL, LABEL_END, 4, 5, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(forksLabel, LABEL_COL, LABEL_END, 5, 6, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(codeLabel, LABEL_COL, LABEL_END, 6, 7, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(yearLabel, LABEL_COL, LABEL_END, 3, 4, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(wheelLabel, LABEL_COL, LABEL_END, 4, 5, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(forksLabel, LABEL_COL, LABEL_END, 5, 6, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(codeLabel, LABEL_COL, LABEL_END, 6, 7, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
 
-            fields.Attach(bikeYear, ENTRY_COL, ENTRY_END, 3, 4, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(bikeWheels, ENTRY_COL, ENTRY_END, 4, 5, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(bikeForks, ENTRY_COL, ENTRY_END, 5, 6, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(codeWidget, ENTRY_COL, ENTRY_END, 6, 7, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-        }
-
-        public Bike getBike(Dictionary<string, List<string>> modelsDict) {
-
-            int parseCode;
-            int bikeYearTry;
-            bool yearValid = int.TryParse(bikeYear.Text, out bikeYearTry);
-            yearValid = yearValid && (bikeYearTry < (DateTime.Now.Year + FUTURE_MARGIN)) && (bikeYearTry > MIN_YEAR);
-
-            bool fieldsEmpty = string.IsNullOrWhiteSpace(bikeYear.Text)
-             || string.IsNullOrWhiteSpace(bikeWheels.Text) 
-             || string.IsNullOrWhiteSpace(bikeForks.Text);
-
-            int makeSelected = bikeMakeC.Active;
-            int modelSelected = bikeModelC.Active;
-
-            fieldsEmpty = fieldsEmpty
-             || makeSelected == -1
-             || modelSelected == -1;
-
-            parseCode = securityCode;
-            if (!codeDisplay) {
-                bool codeParsed = int.TryParse(bikeCode.Text, out parseCode);
-                fieldsEmpty = fieldsEmpty || string.IsNullOrWhiteSpace(bikeCode.Text);
-                
-                if (!codeParsed) {
-                    errorType = ERROR_CODE;
-                }
-            }
-
-            if (fieldsEmpty) {
-                errorType = ERROR_EMPTY;
-            } if (!yearValid) {
-               errorType = ERROR_YEAR;
-            }
-
-            if (securityCode == 0) {
-
-            }
-
-            if (errorType != ERROR_NONE) { 
-                throw new FormatException();
-            }
-            
-            string[] makeArray = modelsDict.Keys.ToArray();
-            string makeParsed = makeArray[makeSelected];
-
-            string[] currentModels = modelsDict[makeParsed].ToArray();
-            string modelParsed = currentModels[modelSelected];
-            
-            savedBike = new Bike(makeParsed, type, modelParsed, bikeYearTry, bikeWheels.Text, bikeForks.Text, parseCode);
-            return savedBike;
+            editorTable.Attach(yearEntry, ENTRY_COL, ENTRY_END, 3, 4, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(wheelsEntry, ENTRY_COL, ENTRY_END, 4, 5, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(forksEntry, ENTRY_COL, ENTRY_END, 5, 6, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+            editorTable.Attach(codeWidget, ENTRY_COL, ENTRY_END, 6, 7, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
         }
 
         protected override uint EDITOR_ROWS {
@@ -138,9 +139,147 @@ namespace Cyclone {
             }
         }
 
-        protected override bool entryEnabled {
+        protected override Widget MakeWidget {
             get {
-                return false;
+                makeCombo = new ComboBox();
+                makeCombo.Clear();
+                makeCombo.PackStart(ComboCell, false);
+                makeCombo.AddAttribute(ComboCell, "text", 0);
+                
+                makeStore = new ListStore(typeof(string));
+                makeCombo.Model = makeStore;
+                return makeCombo;
+            }
+        }
+        
+        protected override string MakeEdit {
+            get {
+                string[] makeArray = comboModels.Keys.ToArray();
+                int makeIndex = makeCombo.Active;
+
+                if (makeIndex == -1) {
+                    throw new IndexOutOfRangeException();
+                }
+
+                return makeArray[makeIndex];
+            } set {
+                string[] makeArray = comboModels.Keys.ToArray();
+                int makeIndex = Array.IndexOf(makeArray, value);
+                makeCombo.Active = makeIndex;
+            }
+        }
+
+        protected override Widget ModelWidget {
+            get {
+                modelCombo = new ComboBox();
+                modelCombo.Clear();
+                modelCombo.PackStart(ComboCell, false);
+                modelCombo.AddAttribute(ComboCell, "text", 0);
+                
+                modelStore = new ListStore(typeof(string));
+                modelCombo.Model = modelStore;
+                return modelCombo;
+            }
+        }
+
+        protected override string ModelEdit {
+            get {
+                List<BikeModel> availableModels = comboModels[MakeEdit];
+
+                if (modelCombo.Active == -1) {
+                    throw new IndexOutOfRangeException();
+                }
+
+                return availableModels[modelCombo.Active].Model;
+            } set {
+                List<BikeModel> availableModels = comboModels[MakeEdit];
+
+                int setModel = 0;
+                int currentModelIndex = 0;
+
+                modelStore.Clear();
+
+                foreach (BikeModel validModel in availableModels) {
+                    modelStore.AppendValues(validModel.Model);
+
+                    if (validModel.Model == value) {
+                        setModel = currentModelIndex;
+                    }
+
+                    currentModelIndex++;
+                }
+
+                modelCombo.Active = setModel;
+            }
+        }
+
+        protected override Widget TypeWidget {
+            get {
+                typeLabel = new Label();
+                return typeLabel;
+            }
+        }
+        
+        protected override string TypeEdit {
+            get {
+                if (string.IsNullOrWhiteSpace(typeLabel.Text)) {
+                    throw new FormatException();
+                }
+                return typeLabel.Text;
+            } set {
+                typeLabel.Text = value;
+            }
+        }
+        
+        private int YearEdit {
+            get {
+                bool yearParsed = int.TryParse(yearEntry.Text, out int parsedYear);
+
+                if (!yearParsed) {
+                    errorType = ERROR_YEAR;
+                    throw new FormatException();
+                }
+
+                return parsedYear;
+            } set {
+                yearEntry.Text = value.ToString();
+            }
+        }
+        
+        private string WheelSizeEdit {
+            get {
+                if (string.IsNullOrWhiteSpace(wheelsEntry.Text)) {
+                    throw new FormatException();
+                }
+                return wheelsEntry.Text;
+            } set {
+                wheelsEntry.Text = value;
+            }
+        }
+        
+        private string ForksEdit {
+            get {
+                if (string.IsNullOrWhiteSpace(forksEntry.Text)) {
+                    throw new FormatException();
+                }
+                return forksEntry.Text;
+            } set {
+                forksEntry.Text = value;
+            }
+        }
+        
+        private int CodeEdit {
+            get {
+                bool codeParsed = int.TryParse(codeEntry.Text, out int parsedCode);
+
+                if (!codeParsed) {
+                    errorType = ERROR_CODE;
+                    throw new FormatException();
+                }
+
+                return parsedCode;
+            } set {
+                codeDisp.Text = value.ToString();
             }
         }
     }

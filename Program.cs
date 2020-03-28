@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Gtk;
+using Newtonsoft.Json;
 
 namespace Cyclone {
     class MainClass {
@@ -34,33 +35,30 @@ namespace Cyclone {
         static Dictionary<int, Bike> inventory;
         static List<BikeModel> validModels;
 
-        static Dictionary<string, List<string>> modelsDict = new Dictionary<string, List<string>> ();
-        static Dictionary<string, string> modelTypeDict = new Dictionary<string, string>();
-
         public static void Main(string[] args) {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string cycloneLocal = Path.Combine(localAppData, "Cyclone");
             string inventorySave = Path.Combine(cycloneLocal, "inventory.json");
             string modelsSave = Path.Combine(cycloneLocal, "models.json");
 
-            Directory.CreateDirectory(cycloneLocal);
-
-            if (File.Exists(inventorySave)) { 
-                
-            }
-
             Application.Init();
             MainWindow mainWindow;
             mainWindow = new MainWindow();
 
-            try {
-                inventory = Parser.ParseInventoryFile(File.ReadAllLines(baseInventory));
-            } catch (FormatException) {
-                mainWindow.SendError("Inventory is not complete");
-            } catch (FileNotFoundException) {
-                mainWindow.SendError("Inventory was not found");
+            Directory.CreateDirectory(cycloneLocal);
+
+            if (File.Exists(inventorySave)) {
+                inventory = JsonConvert.DeserializeObject<Dictionary<int, Bike>>(inventorySave);
+            } else { 
+                try {
+                    inventory = Parser.ParseInventoryFile(File.ReadAllLines(baseInventory));
+                } catch (FormatException) {
+                    mainWindow.SendError("Inventory is not complete");
+                } catch (FileNotFoundException) {
+                    mainWindow.SendError("Inventory was not found");
+                }
             }
-            
+
             try {
                 validModels = Parser.ParseModelsFile(File.ReadAllLines(baseModels));
             } catch (FormatException) {
@@ -80,17 +78,17 @@ namespace Cyclone {
             mainWindow.mainMenu.clearItem.Activated += (sender, e) => clearInventory(sender, e, mainWindow);
 
             mainWindow.mainMenu.changeView.Toggled += (sender, e) => changeTreeStore(sender, e, mainWindow);
-            
+
             mainWindow.BikeCount();
-            
+
             bikeStore.RowInserted += delegate {
                 mainWindow.BikeCount();
             };
-            
+
             bikeStore.RowDeleted += delegate {
                 mainWindow.BikeCount();
             };
-            
+
             mainWindow.bikeTree.RowActivated += (o, rowArgs) => rowActivate(o, rowArgs, mainWindow);
             mainWindow.bikeToolbar.addBikeButton.Clicked += (sender, e) => addBikeButton(sender, e, mainWindow);
             mainWindow.bikeToolbar.removeBikeButton.Clicked += (sender, e) => removeBikeButton(sender, e, mainWindow);
@@ -100,6 +98,12 @@ namespace Cyclone {
             Application.Run();
         }
 
+        /// <summary>
+        /// Imports a correctly formatted file containing bikes.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="args">Arguments.</param>
+        /// <param name="mainWindow">Main window.</param>
         private static void importFile(object sender, EventArgs args, MainWindow mainWindow) {
             FileChooserDialog importFileDialog = new FileChooserDialog("Import an existing inventory file", 
                 mainWindow, FileChooserAction.Open, 
@@ -125,6 +129,12 @@ namespace Cyclone {
             importFileDialog.Destroy();
         }
 
+        /// <summary>
+        /// Exports a report.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">E.</param>
+        /// <param name="mainWindow">Main window.</param>
         private static void exportFile(object sender, EventArgs e, MainWindow mainWindow) {
             FileChooserDialog exportFileDiag = new FileChooserDialog("Create a report", 
                 mainWindow, FileChooserAction.Save, 
@@ -137,6 +147,12 @@ namespace Cyclone {
             exportFileDiag.Destroy();    
         }
 
+        /// <summary>
+        /// Clears the inventory.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">E.</param>
+        /// <param name="mainWindow">Main window.</param>
         private static void clearInventory(object sender, EventArgs e, MainWindow mainWindow) {
             string confMsg = string.Format( "Are you sure you want to delete ALL {0} bikes in the inventory?", Bike.BikeCount);
 
@@ -158,6 +174,11 @@ namespace Cyclone {
             clearDialog.Destroy();
         }
 
+        /// <summary>
+        /// Launches window to edit valid bike models.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">E.</param>
         private static void editModels(object sender, EventArgs e) {
             ModelsViewer modelsWin;
             modelsWin = new ModelsViewer();
@@ -184,7 +205,13 @@ namespace Cyclone {
             modelsWin.ShowAll();
             modelsWin.Show();
         }
-        
+
+        /// <summary>
+        /// Imports a correctly formatted file containing valid models.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="args">Arguments.</param>
+        /// <param name="editorWindow">Editor window.</param>
         private static void importModelsFile(object sender, EventArgs args, ModelsViewer editorWindow) {
             FileChooserDialog importFileDialog = new FileChooserDialog("Import an existing inventory file", 
                 editorWindow, FileChooserAction.Open, 
@@ -215,7 +242,13 @@ namespace Cyclone {
 
             importFileDialog.Destroy();    
         }
-        
+
+        /// <summary>
+        /// Changes the visible tree store.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">E.</param>
+        /// <param name="mainWindow">Main window.</param>
         private static void changeTreeStore(object sender, EventArgs e, MainWindow mainWindow) {
             if (mainWindow.bikeTree.Model == bikeStore) {
                 mainWindow.bikeTree.Model = bikeExpStore;
@@ -225,32 +258,41 @@ namespace Cyclone {
         }
 
         private static void addBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
-            BikeEditor createBikeWin = new BikeEditor();
-            string[] makeArray = modelsDict.Keys.ToArray();
-            string[] modelArray = { };
-            createBikeWin.makeCombo(makeArray);
+            BikeEditor createBikeWin = new BikeEditor(GroupModels(validModels));
 
-            createBikeWin.bikeMakeC.Changed += delegate {
-                int makeIndex = createBikeWin.bikeMakeC.Active;
-                string make = makeArray[makeIndex];
-                modelArray = modelsDict[make].ToArray();
-                createBikeWin.modelCombo(modelArray);
-            };
+            Dictionary<string, List<BikeModel>> modelsGrouped = GroupModels(validModels);
 
-            createBikeWin.bikeModelC.Changed += delegate {
-                int modelIndex = createBikeWin.bikeModelC.Active;
-                if (modelIndex != -1) {
-                    string model = modelArray[modelIndex];
-                    createBikeWin.type = modelTypeDict[model];
-                } else {
-                    createBikeWin.type = "";
-                }
-            };
+            string[] makeArray = modelsGrouped.Keys.ToArray();
+            List<BikeModel> makeModels = new List<BikeModel>();
+            List<string> modelNames = new List<string>();
+
+            //createBikeWin.bikeMakeC.Changed += delegate {
+            //    int makeIndex = createBikeWin.bikeMakeC.Active;
+            //    string make = makeArray[makeIndex];
+
+            //    makeModels = modelsGrouped[make];
+
+            //    foreach (BikeModel makeModel in makeModels) {
+            //        modelNames.Add(makeModel.Model);
+            //    }
+
+            //    createBikeWin.modelCombo(modelNames.ToArray());
+            //};
+
+            //createBikeWin.bikeModelC.Changed += delegate {
+            //    int modelIndex = createBikeWin.bikeModelC.Active;
+
+            //    if (modelIndex != -1) {
+            //        createBikeWin.type = makeModels[modelIndex].Type;
+            //    } else {
+            //        createBikeWin.type = "";
+            //    }
+            //};
 
             createBikeWin.ShowAll();
             createBikeWin.Show();
 
-            createBikeWin.saveBike.Clicked += (saveSender, saveE) => createBike(saveSender, saveE, mainWindow, createBikeWin);
+            createBikeWin.saveEdit.Clicked += (saveSender, saveE) => createBike(saveSender, saveE, mainWindow, createBikeWin);
         }
         
         private static void addModelButton(object sender, EventArgs e, ModelsViewer editorWindow) {
@@ -260,12 +302,12 @@ namespace Cyclone {
             createModelWin.ShowAll();
             createModelWin.Show();
             
-            createModelWin.saveBike.Clicked += (saveSender, saveE) => createModel(saveSender, saveE, editorWindow, createModelWin);
+            createModelWin.saveEdit.Clicked += (saveSender, saveE) => createModel(saveSender, saveE, editorWindow, createModelWin);
         }
 
         private static void createBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor bikeWin) {
             try {
-                Bike newBike = bikeWin.getBike(modelsDict);
+                Bike newBike = bikeWin.ParseBike();
                 Console.WriteLine(string.Format("Adding bike of make {0} and model {1}", newBike.Make, newBike.Model));
 
                 AddToInventory(newBike.AsInventory);
@@ -276,19 +318,21 @@ namespace Cyclone {
 
                 if (bikeError == BikeEditor.ERROR_YEAR) {
                     mainWindow.SendError("Please enter a valid year");
-                } else if (bikeError == ModelEditor.ERROR_EMPTY) {
-                    mainWindow.SendError("Please fill in all mandatory fields");
                 } else if (bikeError == BikeEditor.ERROR_CODE) {
                     mainWindow.SendError("Please enter a valid code");
-                }
+                } else {
+                    mainWindow.SendError("Please fill in all mandatory fields");
+                } 
+            } catch (IndexOutOfRangeException) { 
+                mainWindow.SendError("Please select both a make and model");
+            } finally {
+                bikeWin.Destroy();
             }
-
-            bikeWin.Destroy();
         }
 
         private static void createModel(object sender, EventArgs e, ModelsViewer mainWindow, ModelEditor modelWin) {
             try {
-                BikeModel newBike = modelWin.getModel();
+                BikeModel newBike = modelWin.ParseModel();
                 Console.WriteLine(string.Format("Adding model {0} of make {1}", newBike.Model, newBike.Make));
 
                 AddToModels(new List<BikeModel> { newBike });
@@ -450,41 +494,11 @@ namespace Cyclone {
                 string forks = (string) activeStore.GetValue(rowActive, STORE_FORKS_P);
                 int code = (int) activeStore.GetValue(rowActive, STORE_CODE_P);
 
-                BikeEditor editBikeWin;
-                editBikeWin = new BikeEditor(make, model, year, type, wheelSize, forks, code);
-                string[] makeArray = modelsDict.Keys.ToArray();
-                string[] modelArray = { };
-                editBikeWin.makeCombo(makeArray);
-                
-                int selectMake = Array.IndexOf(makeArray, make);
-                editBikeWin.bikeMakeC.Active = selectMake;
-
-                modelArray = modelsDict[make].ToArray();
-                int selectModel = Array.IndexOf(modelArray, model);
-                editBikeWin.modelCombo(modelArray);
-                editBikeWin.bikeModelC.Active = selectModel;
-                editBikeWin.type = modelTypeDict[model];
-                          
-                editBikeWin.bikeMakeC.Changed += delegate {
-                    int makeIndex = editBikeWin.bikeMakeC.Active;
-                    string makeParsed = makeArray[makeIndex];
-                    modelArray = modelsDict[makeParsed].ToArray();
-                    editBikeWin.modelCombo(modelArray);
-                };
-    
-                editBikeWin.bikeModelC.Changed += delegate {
-                    int modelIndex = editBikeWin.bikeModelC.Active;
-                    if (modelIndex != -1) {
-                        string modelParsed = modelArray[modelIndex];
-                        editBikeWin.type = modelTypeDict[modelParsed];
-                    } else {
-                        editBikeWin.type = "";
-                    }
-                };
+                BikeEditor editBikeWin = new BikeEditor(GroupModels(validModels), make, model, year, type, wheelSize, forks, code);
 
                 editBikeWin.ShowAll();
                 editBikeWin.Show();
-                editBikeWin.saveBike.Clicked += (sender, e) => EditBike(sender, e, mainWindow, editBikeWin);
+                editBikeWin.saveEdit.Clicked += (sender, e) => OverwriteBike(sender, e, mainWindow, editBikeWin);
             }
         }
 
@@ -497,7 +511,7 @@ namespace Cyclone {
                 TreeIter editIter;
 
                 if (modelStore.GetIter(out editIter, selected[0])) {
-                    editModel(editIter, editorWindow);
+                    EditModel(editIter, editorWindow);
                 }
             } else {
                 editorWindow.SendError("Can't edit more than one model at a time");
@@ -507,10 +521,10 @@ namespace Cyclone {
         private static void modelActivate(object o, RowActivatedArgs args, ModelsViewer modelsWindow) {
             TreeIter rowActive;
             modelStore.GetIter(out rowActive, args.Path);
-            editModel(rowActive, modelsWindow);
+            EditModel(rowActive, modelsWindow);
         }
 
-        private static void editModel(TreeIter rowActive, ModelsViewer modelsWindow) {
+        private static void EditModel(TreeIter rowActive, ModelsViewer modelsWindow) {
             int rowType = modelStore.IterDepth(rowActive);
 
             if (rowType == MODEL_DEPTH) {
@@ -518,11 +532,12 @@ namespace Cyclone {
                 string model = (string) modelStore.GetValue(rowActive, MODEL_MODEL_P);
                 string type = (string) modelStore.GetValue(rowActive, MODEL_TYPE_P);
 
-                ModelEditor editModelWin = new ModelEditor(make, model, type);
+                BikeModel oldModel = new BikeModel(make, model, type, true);
+                ModelEditor editModelWin = new ModelEditor(oldModel);
 
                 editModelWin.ShowAll();
                 editModelWin.Show();
-                editModelWin.saveBike.Clicked += (sender, e) => EditModel(sender, e, modelsWindow, editModelWin);
+                editModelWin.saveEdit.Clicked += (sender, e) => OverwriteModel(sender, e, modelsWindow, editModelWin);
             }
         }
 
@@ -533,9 +548,9 @@ namespace Cyclone {
         /// <param name="e">E.</param>
         /// <param name="mainWindow">Main window.</param>
         /// <param name="editBikeWin">Edit bike window.</param>
-        private static void EditBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor editBikeWin) {
+        private static void OverwriteBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor editBikeWin) {
             try {
-                Bike newBike = editBikeWin.getBike(modelsDict);
+                Bike newBike = editBikeWin.ParseBike();
                 DeleteBike(newBike.SecurityCode);
 
                 AddToInventory(newBike.AsInventory);
@@ -549,6 +564,8 @@ namespace Cyclone {
                 } else if (bikeError == ModelEditor.ERROR_EMPTY) {
                     mainWindow.SendError("Please fill in all mandatory fields");
                 }
+            } catch (IndexOutOfRangeException) { 
+                mainWindow.SendError("Please select both a make and model");
             } finally {
                 editBikeWin.Destroy();
             }
@@ -561,10 +578,10 @@ namespace Cyclone {
         /// <param name="e">E.</param>
         /// <param name="modelsWindow">Models window.</param>
         /// <param name="editModelWin">Edit model window.</param>
-        private static void EditModel(object sender, EventArgs e, ModelsViewer modelsWindow, ModelEditor editModelWin) {
+        private static void OverwriteModel(object sender, EventArgs e, ModelsViewer modelsWindow, ModelEditor editModelWin) {
             try {
-                BikeModel newModel = editModelWin.getModel();
-                DeleteModel(newModel);
+                BikeModel newModel = editModelWin.ParseModel();
+                DeleteModel(editModelWin.oldModel);
 
                 AddToModels(new List<BikeModel> { newModel });
                 RepopulateModelTree(validModels);
@@ -585,33 +602,8 @@ namespace Cyclone {
         /// </summary>
         /// <param name="bikeInventory">Bike inventory list.</param>
         private static void RepopulateBikeTree(Dictionary<int, Bike> bikeInventory) {
-            Dictionary<string, Dictionary<string, List<Bike>>> inventoryMap = new Dictionary<string, Dictionary<string, List<Bike>>>();
+            Dictionary<string, Dictionary<string, List<Bike>>> inventoryMap = GroupBikes(bikeInventory);
 
-            // For every bike in the inventory parameter
-            foreach (Bike storedBike in bikeInventory.Values) {
-
-                // Check if make is already in map
-                if (inventoryMap.ContainsKey(storedBike.Make)) {
-                    // Check if model is in map
-                    if (inventoryMap[storedBike.Make].ContainsKey(storedBike.Model)) {
-                        // Make and model were already present, add bike to model
-                        inventoryMap[storedBike.Make][storedBike.Model].Add(storedBike);
-                    } else {
-                        // Model was not present, create it as list and insert bike
-                        inventoryMap[storedBike.Make][storedBike.Model] = new List<Bike> {
-                            storedBike
-                        };
-                    }
-                } else {
-                    // Make was not present, create make dictionary and model list, insert bike
-                    inventoryMap[storedBike.Make] = new Dictionary<string, List<Bike>> {
-                        [storedBike.Model] = new List<Bike> { 
-                            storedBike 
-                        }
-                    };
-                }
-            }
-            
             // Create bikeStore if not yet done
             if (bikeStore == null) {
                 bikeStore = new TreeStore(typeof(int), typeof(string), typeof(string),
@@ -659,12 +651,77 @@ namespace Cyclone {
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Groups the bikes by make and model, to later display in a Tree.
+        /// </summary>
+        /// <returns>The bikes.</returns>
+        /// <param name="bikeInventory">Bike inventory.</param>
+        private static Dictionary<string, Dictionary<string, List<Bike>>> GroupBikes(Dictionary<int, Bike> bikeInventory) {
+            Dictionary<string, Dictionary<string, List<Bike>>> inventoryMap = new Dictionary<string, Dictionary<string, List<Bike>>>();
+
+            // For every bike in the inventory parameter
+            foreach (Bike storedBike in bikeInventory.Values) {
+
+                // Check if make is already in map
+                if (inventoryMap.ContainsKey(storedBike.Make)) {
+                    // Check if model is in map
+                    if (inventoryMap[storedBike.Make].ContainsKey(storedBike.Model)) {
+                        // Make and model were already present, add bike to model
+                        inventoryMap[storedBike.Make][storedBike.Model].Add(storedBike);
+                    } else {
+                        // Model was not present, create it as list and insert bike
+                        inventoryMap[storedBike.Make][storedBike.Model] = new List<Bike> {
+                            storedBike
+                        };
+                    }
+                } else {
+                    // Make was not present, create make dictionary and model list, insert bike
+                    inventoryMap[storedBike.Make] = new Dictionary<string, List<Bike>> {
+                        [storedBike.Model] = new List<Bike> { 
+                            storedBike 
+                        }
+                    };
+                }
+            }
+
+            return inventoryMap;
+        }
+
         /// <summary>
         /// Repopulates the model tree.
         /// </summary>
         /// <param name="modelRegistry">Model list.</param>
         private static void RepopulateModelTree(List<BikeModel> modelRegistry) {
+            Dictionary<string, List<BikeModel>> modelMap = GroupModels(modelRegistry);
+
+            // Create modelStore if not yet done
+            if (modelStore == null) {
+                modelStore = new TreeStore(typeof(string), typeof(string), typeof(string));
+            }
+
+            modelStore.Clear();
+
+            // For each model make
+            foreach (string modelMake in modelMap.Keys) {
+                // Append make parent node to TreeStore
+                TreeIter storeMake = modelStore.AppendValues(modelMake);
+                
+                // For each bike of that model of that make
+                foreach (BikeModel validModel in modelMap[modelMake]) {
+                    // Append model to store, inside make
+                    TreeIter storeModel = modelStore.AppendValues(storeMake,
+                        validModel.Make, validModel.Model, validModel.Type);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Groups model list by make.
+        /// </summary>
+        /// <returns>The models.</returns>
+        /// <param name="modelRegistry">Model registry.</param>
+        private static Dictionary<string, List<BikeModel>> GroupModels(List<BikeModel> modelRegistry) {
             Dictionary<string, List<BikeModel>> modelMap = new Dictionary<string, List<BikeModel>>();
 
             // For every model in the model list parameter
@@ -680,23 +737,7 @@ namespace Cyclone {
                 }
             }
 
-            // Create modelStore if not yet done
-            if (modelStore == null) {
-                modelStore = new TreeStore(typeof(string), typeof(string), typeof(string));
-            }
-
-            // For each model make
-            foreach (string modelMake in modelMap.Keys) {
-                // Append make parent node to TreeStore
-                TreeIter storeMake = modelStore.AppendValues(modelMake);
-                
-                // For each bike of that model of that make
-                foreach (BikeModel validModel in modelMap[modelMake]) {
-                    // Append model to store, inside make
-                    TreeIter storeModel = modelStore.AppendValues(storeMake,
-                        validModel.Make, validModel.Model, validModel.Type);
-                }
-            }
+            return modelMap;
         }
 
         /// <summary>
@@ -757,6 +798,16 @@ namespace Cyclone {
                     validModels.Add(newModel);
                 }
             }
+        }
+
+        private void SaveInventoryToJSON(string inventoryFile) {
+            string inventoryJSON = JsonConvert.SerializeObject(inventory);
+            File.WriteAllText(inventoryFile, inventoryJSON);
+        }
+
+        private void SaveModelsToJSON(string modelsFile) {
+            string modelsJSON = JsonConvert.SerializeObject(validModels);
+            File.WriteAllText(modelsFile, modelsJSON);
         }
     }
 }

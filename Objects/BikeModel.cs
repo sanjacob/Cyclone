@@ -15,12 +15,14 @@ namespace Cyclone {
         /// <param name="make">Make.</param>
         /// <param name="type">Type.</param>
         /// <param name="model">Model.</param>
-        public BikeModel(string make, string type, string model) {
+        public BikeModel(string make, string type, string model, bool temp = false) {
             Make = make;
             Type = type;
             Model = model;
 
-            modelTotal++;
+            if (!temp) {
+                modelTotal++;
+            }
         }
 
         /// <summary>

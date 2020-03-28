@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using Gtk;
 namespace Cyclone {
     public class ModelEditor : Window {
-        protected Table fields;
-        public Entry bikeMake;
-        public Entry bikeModel;
-        public Entry bikeType;
+        public BikeModel oldModel;
+        protected Table editorTable;
 
-        public ComboBox bikeMakeC;
-        public ListStore makeStore;
-        public ComboBox bikeModelC;
-        public ListStore modelStore;
-        private Label bikeTypeL;
+        public Entry makeEntry;
+        public Entry modelEntry;
+        public Entry typeEntry;
 
-        public Button saveBike;
+        public Button saveEdit;
 
         public int errorType;
         public const int ERROR_NONE = 0;
@@ -44,16 +39,23 @@ namespace Cyclone {
             createEditor();
         }
 
-        public ModelEditor(string make, string model, string type) : base(WindowType.Toplevel) {
+        public ModelEditor(BikeModel editedModel) : base(WindowType.Toplevel) {
+            oldModel = editedModel;
             createEditor();
 
             Title = "Modify model";
-            bikeMake.Text = make;
-            bikeModel.Text = model;
-            bikeType.Text = type;
+            MakeEdit = editedModel.Make;
+            ModelEdit = editedModel.Model;
+            TypeEdit = editedModel.Type;
         }
 
         public void createEditor() {
+            EditorProperties();
+            editorTable = ModelTable;
+            Add(editorTable);
+        }
+        
+        private void EditorProperties() {
             SetDefaultSize(WIN_W, WIN_H);
             SetSizeRequest(WIN_W, WIN_H);
             //Resizable = false;
@@ -63,85 +65,10 @@ namespace Cyclone {
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
                      "Cyclone.Assets.Bike_Yellow.png", ICON_SIDE, ICON_SIDE);
             Icon = windowIcon;
-
-            fields = new Table(EDITOR_ROWS, EDITOR_COLUMNS, false);
-            fields.BorderWidth = EDITOR_BORDER_WIDTH;
-
-            Label makeLabel = new Label("Make: ");
-            Label modelLabel = new Label("Model: ");
-            Label typeLabel = new Label("Type: ");
-
-            Widget makeWidget;
-            Widget modelWidget;
-            Widget typeWidget;
-
-            bikeMake = new Entry();
-            bikeModel = new Entry();
-            bikeType = new Entry();
-
-            makeWidget = bikeMake;
-            modelWidget = bikeModel;
-            typeWidget = bikeType;
-
-            if (!entryEnabled) {
-                CellRendererText comboCell = new CellRendererText();
-
-                bikeMakeC = new ComboBox();
-                bikeMakeC.Clear();
-
-                bikeMakeC.PackStart(comboCell, false);
-                bikeMakeC.AddAttribute(comboCell, "text", 0);
-
-                makeStore = new ListStore(typeof(string));
-                bikeMakeC.Model = makeStore;
-
-                bikeModelC = new ComboBox();
-                bikeModelC.Clear();
-
-                bikeModelC.PackStart(comboCell, false);
-                bikeModelC.AddAttribute(comboCell, "text", 0);
-
-                modelStore = new ListStore(typeof(string));
-                bikeModelC.Model = modelStore;
-
-                bikeTypeL = new Label();
-
-                makeWidget = bikeMakeC;
-                modelWidget = bikeModelC;
-                typeWidget = bikeTypeL;
-            }
-
-            saveBike = new Button();
-            Label saveNemo = new Label("_Save");
-            saveBike.Label = "Save";
-            saveBike.AddMnemonicLabel(saveNemo);
-
-            fields.Attach(makeLabel, LABEL_COL, LABEL_END, 0, 1, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(modelLabel, LABEL_COL, LABEL_END, 1, 2, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(typeLabel, LABEL_COL, LABEL_END, 2, 3, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-
-            fields.Attach(makeWidget, ENTRY_COL, ENTRY_END, 0, 1, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(modelWidget, ENTRY_COL, ENTRY_END, 1, 2, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-            fields.Attach(typeWidget, ENTRY_COL, ENTRY_END, 2, 3, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
-
-            uint SAVE_END = SAVE_START + SAVE_SPAN;
-            fields.Attach(saveBike, LABEL_COL, ENTRY_END, SAVE_START, SAVE_END, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD * 2, CELL_PAD * 2);
-            Add(fields);
         }
 
-        public BikeModel getModel() {
-            bool fieldsEmpty = string.IsNullOrWhiteSpace(bikeMake.Text) || string.IsNullOrWhiteSpace(bikeModel.Text)
-                || string.IsNullOrWhiteSpace(bikeType.Text);
-
-            if (fieldsEmpty) {
-                errorType = ERROR_EMPTY;
-            }
-
-            if (errorType != ERROR_NONE) {
-                throw new FormatException();
-            }
-
-            BikeModel editedModel = new BikeModel(bikeMake.Text, bikeType.Text, bikeModel.Text);
+        public BikeModel ParseModel() {
+            BikeModel editedModel = new BikeModel(MakeEdit, ModelEdit, TypeEdit);
             return editedModel;
         }
 
@@ -157,33 +84,86 @@ namespace Cyclone {
             }
         }
 
-        protected virtual bool entryEnabled {
+        protected virtual Widget MakeWidget {
             get {
-                return true;
+                makeEntry = new Entry();
+                return makeEntry;
             }
         }
-
-        public virtual void makeCombo(string[] makeList) {
-            makeStore.Clear();
-
-            foreach (string make in makeList) {
-                makeStore.AppendValues(make);
-            }
-        }
-
-        public virtual void modelCombo(string[] modelList) {
-            modelStore.Clear();
-
-            foreach (string model in modelList) {
-                modelStore.AppendValues(model);
-            }
-        }
-
-        public string type {
+        
+        protected virtual string MakeEdit {
             get {
-                return bikeTypeL.Text;
+                if (string.IsNullOrWhiteSpace(makeEntry.Text)) {
+                    throw new FormatException();
+                }
+                return makeEntry.Text;
             } set {
-                bikeTypeL.Text = value;
+                makeEntry.Text = value;
+            }
+        }
+
+        protected virtual Widget ModelWidget {
+            get {
+                modelEntry = new Entry();
+                return modelEntry;
+            }
+        }
+
+        protected virtual string ModelEdit {
+            get {
+                if (string.IsNullOrWhiteSpace(modelEntry.Text)) {
+                    throw new FormatException();
+                }
+                return modelEntry.Text;
+            } set {
+                modelEntry.Text = value;
+            }
+        }
+
+        protected virtual Widget TypeWidget {
+            get {
+                typeEntry = new Entry();
+                return typeEntry;
+            }
+        }
+        
+        protected virtual string TypeEdit {
+            get {
+                if (string.IsNullOrWhiteSpace(typeEntry.Text)) {
+                    throw new FormatException();
+                }
+                return typeEntry.Text;
+            } set {
+                typeEntry.Text = value;
+            }
+        }
+
+        private Table ModelTable {
+            get {
+                Table newTable = new Table(EDITOR_ROWS, EDITOR_COLUMNS, false);
+                newTable.BorderWidth = EDITOR_BORDER_WIDTH;
+    
+                Label makeLabel = new Label("Make: ");
+                Label modelLabel = new Label("Model: ");
+                Label typeLabel = new Label("Type: ");
+    
+                saveEdit = new Button();
+                Label saveNemo = new Label("_Save");
+                saveEdit.Label = "Save";
+                saveEdit.AddMnemonicLabel(saveNemo);
+    
+                newTable.Attach(makeLabel, LABEL_COL, LABEL_END, 0, 1, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+                newTable.Attach(modelLabel, LABEL_COL, LABEL_END, 1, 2, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+                newTable.Attach(typeLabel, LABEL_COL, LABEL_END, 2, 3, AttachOptions.Shrink, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+    
+                newTable.Attach(MakeWidget, ENTRY_COL, ENTRY_END, 0, 1, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+                newTable.Attach(ModelWidget, ENTRY_COL, ENTRY_END, 1, 2, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+                newTable.Attach(TypeWidget, ENTRY_COL, ENTRY_END, 2, 3, AttachOptions.Fill, AttachOptions.Expand, CELL_PAD, CELL_PAD);
+    
+                uint SAVE_END = SAVE_START + SAVE_SPAN;
+                newTable.Attach(saveEdit, LABEL_COL, ENTRY_END, SAVE_START, SAVE_END, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD * 2, CELL_PAD * 2);
+
+                return newTable;
             }
         }
     }
