@@ -35,7 +35,7 @@ namespace Cyclone {
         static Dictionary<int, Bike> inventory = new Dictionary<int, Bike>();
         static List<BikeModel> validModels = new List<BikeModel>();
 
-        static List<Sale> bikeSales;
+        static List<Sale> bikeSales = new List<Sale>();
 
         public static void Main(string[] args) {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -555,8 +555,27 @@ namespace Cyclone {
                 SaleWindow newSaleWin = new SaleWindow(soldBikes);
                 newSaleWin.ShowAll();
                 newSaleWin.Show();
+                newSaleWin.Apply += (applySender, applyE) => NewBikeSale(sender, e, newSaleWin, mainWindow);
             } else {
                 mainWindow.SendError("Select between 1 and 10 bikes to sell");
+            }
+        }
+
+        private static void NewBikeSale(object sender, EventArgs e, SaleWindow saleWindow, MainWindow mainWindow) {
+            try {
+                Sale newSale = saleWindow.ParseSale();
+
+                foreach (Bike bike in newSale.soldBikes) {
+                    DeleteBike(bike.SecurityCode);
+                }
+
+                mainWindow.Balance();
+                bikeSales.Add(newSale);
+                RepopulateBikeTree(inventory);
+            } catch (FormatException) {
+                throw new NotImplementedException();
+            } catch (IndexOutOfRangeException) {
+                throw new NotImplementedException();
             }
         }
 

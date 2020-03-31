@@ -7,14 +7,17 @@ using Gtk;
 using Newtonsoft.Json;
 
 namespace Cyclone {
-    public class SaleWindow : Window {
-        private VBox windowBox;
+    public class SaleWindow : Assistant {
         private Entry nameEntry;
         private Entry surnameEntry;
         private Entry emailEntry;
         private Entry phoneEntry;
+
         private ComboBox paymentCombo;
+        private List<SpinButton> bikePrices = new List<SpinButton>();
+
         private ComboBox countryCombo;
+        private List<string> countryList;
         private Entry regionEntry;
         private Entry cityEntry;
         private Entry postCodeEntry;
@@ -22,48 +25,46 @@ namespace Cyclone {
         private Entry addressTwoEntry;
 
         private List<Bike> soldBikes;
-        private List<SpinButton> bikePrices = new List<SpinButton>();
-        private List<string> countryList;
         string[] paymentOptions = { "Cash", "Card", "Paypal" };
 
-        public const int WIN_W = 800;
-        public const int WIN_H = 600;
+        public const int WIN_W = 180;
+        public const int WIN_H = 120;
         public const uint defPadding = 20;
 
         public const int ICON_SIDE = 32;
         public const int TOOL_SIDE = 24;
 
-        private uint _EDITOR_ROWS = 4;
-        protected uint EDITOR_COLUMNS = 2;
         protected const uint EDITOR_BORDER_WIDTH = 4;
         protected const uint CELL_PAD = 4;
 
-        protected const uint LABEL_SPAN = 1;
+        protected const float V_MIDDLE = 0.5f;
+        protected const float H_START = 0;
 
-        public SaleWindow(List<Bike> saleBikes) : base(WindowType.Toplevel) {
+        public SaleWindow(List<Bike> saleBikes) {
             soldBikes = saleBikes;
-
             WindowProperties();
-            Frame clientDataFrame = new Frame("Personal Information");
-            SetFrame(ref clientDataFrame);
 
-            Table pInfoTable = PersonalTable;
-            clientDataFrame.Add(pInfoTable);
-            windowBox.Add(clientDataFrame);
+            Widget basicInfoPage = CustomerInfo;
+            AppendPage(basicInfoPage);
+            SetPageTitle(basicInfoPage, "Customer Information");
+            SetPageType (basicInfoPage, AssistantPageType.Content);
 
-            Frame paymentFrame = new Frame("Payment");
-            SetFrame(ref paymentFrame);
+            Widget paymentPage = PaymentInfo;
+            AppendPage(paymentPage);
+            SetPageTitle(paymentPage, "Bike Costs And Payment");
+            SetPageType (paymentPage, AssistantPageType.Content);
 
-            Table paymentTable = PaymentTable;
-            paymentFrame.Add(paymentTable);
-            windowBox.Add(paymentFrame);
+            Widget addressPage = CustomerAddress;
+            AppendPage(addressPage);
+            SetPageTitle(addressPage, "Customer Address");
+            SetPageType (addressPage, AssistantPageType.Content);
 
-            Frame addressFrame = new Frame("Address");
-            SetFrame(ref addressFrame);
+            Widget completeSale = ReviewSale;
+            AppendPage (completeSale);
 
-            Table addressTable = AddressTable;
-            addressFrame.Add(addressTable);
-            windowBox.Add(addressFrame);
+            SetPageTitle (completeSale, "Review Sale");
+            SetPageType (completeSale, AssistantPageType.Confirm);
+            SetPageComplete(completeSale, true);
         }
 
         /// <summary>
@@ -74,152 +75,232 @@ namespace Cyclone {
             SetSizeRequest(WIN_W, WIN_H);
 
             //Resizable = false;
-            Title = "Sell bikes";
+            Title = "Sale Assistant";
 
             // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
                      "Cyclone.Assets.Money.png", ICON_SIDE, ICON_SIDE);
             Icon = windowIcon;
 
-            // Create uppermost container
-            windowBox = new VBox(false, 0);
-
-            ScrolledWindow scrolledWindow = new ScrolledWindow();
-            scrolledWindow.Add(windowBox);
-            Add(scrolledWindow);
+            Cancel += AssistantCancel;
+            Close += AssistantClose;
         }
 
-        private void SetFrame(ref Frame frame) {
-            frame.MarginTop = frame.MarginBottom = (int)defPadding;
-            frame.MarginLeft = frame.MarginRight = (int)defPadding;
+        private void AssistantClose(object sender, EventArgs e) {
+            Destroy();
         }
 
-        protected Table PersonalTable {
+        protected Widget CustomerInfo {
             get {
-                Table pInfoTable = new Table(EDITOR_ROWS, 3, true);
-                pInfoTable.BorderWidth = EDITOR_BORDER_WIDTH;
-                pInfoTable.Expand = true;
-                pInfoTable.Halign = Align.Center;
+                uint customerRows = 5;
+                uint customerColumns = 2;
+
+                // First Column
+                uint fStart = 0;
+                uint fSpan = 1;
+                uint fEnd = fStart + fSpan;
+
+                // Second Column
+                uint sStart = 1;
+                uint sSpan = 1;
+                uint sEnd = sStart + sSpan;
+
+                Table basicTable = new Table(customerRows, customerColumns, true);
+                basicTable.BorderWidth = EDITOR_BORDER_WIDTH;
+                basicTable.Halign = Align.Center;
+                basicTable.Expand = true;
+                
+                Label customerLabel = new Label("<b>CUSTOMER INFORMATION:</b>");
+                customerLabel.UseMarkup = true;
+                customerLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label nameLabel = new Label("Name*");
-                nameLabel.SetAlignment(0, (float)0.5);
+                nameLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label surnameLabel = new Label("Surname*");
-                surnameLabel.SetAlignment(0, (float)0.5);
+                surnameLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label emailLabel = new Label("E-Mail");
-                emailLabel.SetAlignment(0, (float)0.5);
+                emailLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label phoneLabel = new Label("Phone Number*");
-                phoneLabel.SetAlignment(0, (float)0.5);
+                phoneLabel.SetAlignment(H_START, V_MIDDLE);
 
                 nameEntry = new Entry();
+                nameEntry.Changed += ValidateBasic;
                 surnameEntry = new Entry();
+                surnameEntry.Changed += ValidateBasic;
                 emailEntry = new Entry();
+                emailEntry.Changed += ValidateBasic;
                 phoneEntry = new Entry();
+                phoneEntry.Changed += ValidateBasic;
 
-                pInfoTable.Attach(nameLabel, 0, 1, 0, 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(surnameLabel, 2, 3, 0, 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(emailLabel, 0, 1, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(phoneLabel, 2, 3, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                List<Widget> basicWgtList = new List<Widget> { null, null, nameLabel, surnameLabel, 
+                nameEntry, surnameEntry, emailLabel, phoneLabel, emailEntry, phoneEntry};
 
-                pInfoTable.Attach(nameEntry, 0, 1, 1, 2, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(surnameEntry, 2, 3, 1, 2, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(emailEntry, 0, 1, 3, 4, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                pInfoTable.Attach(phoneEntry, 2, 3, 3, 4, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                uint row = 0;
+                basicTable.Attach(customerLabel, fStart, sEnd, row, ++row, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
 
-                return pInfoTable;
+                for (; row < customerRows; row++) {
+                    basicTable.Attach(basicWgtList[(int)row*2], fStart, fEnd, row, row + 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                    basicTable.Attach(basicWgtList[((int)row*2)+1], sStart, sEnd, row, row + 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                }
+
+                return basicTable;
             }
         }
 
-        protected Table AddressTable {
+        protected Widget CustomerAddress {
             get {
-                Table addressTable = new Table(8, EDITOR_COLUMNS, true);
+                uint addressRows= 9;
+                uint addressColumns = 2;
+
+                // First Column
+                uint genStart = 0;
+                uint genSpan = 1;
+                uint genEnd = genStart + genSpan;
+
+                // Second Column
+                uint regionStart = 1;
+                uint regionSpan = 1;
+                uint regionEnd = regionStart + regionSpan;
+
+                Table addressTable = new Table(addressRows, addressColumns, true);
                 addressTable.BorderWidth = EDITOR_BORDER_WIDTH;
                 addressTable.Halign = Align.Center;
                 addressTable.Expand = true;
+                
+                Label addressLabel = new Label("<b>CUSTOMER ADDRESS:</b>");
+                addressLabel.UseMarkup = true;
+                addressLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label countryLabel = new Label("Country*");
-                countryLabel.SetAlignment(0, (float)0.5);
+                countryLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label regionLabel = new Label("County*");
-                regionLabel.SetAlignment(0, (float)0.5);
+                regionLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label cityLabel = new Label("City*");
-                cityLabel.SetAlignment(0, (float)0.5);
+                cityLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label postCodeLabel = new Label("Post Code*");
-                postCodeLabel.SetAlignment(0, (float)0.5);
+                postCodeLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label addressOneLabel = new Label("Street and House No.*");
-                addressOneLabel.SetAlignment(0, (float)0.5);
+                addressOneLabel.SetAlignment(H_START, V_MIDDLE);
 
                 Label addressTwoLabel = new Label("Apartment, Suite, Unit, Floor*");
-                addressTwoLabel.SetAlignment(0, (float)0.5);
+                addressTwoLabel.SetAlignment(H_START, V_MIDDLE);
 
                 countryList = GetCountries();
                 countryCombo = new ComboBox(countryList.ToArray());
                 countryCombo.Active = 240;
+
                 regionEntry = new Entry();
+                regionEntry.Changed += ValidateAddress;
                 cityEntry = new Entry();
+                cityEntry.Changed += ValidateAddress;
                 postCodeEntry = new Entry();
+                postCodeEntry.Changed += ValidateAddress;
                 addressOneEntry = new Entry();
+                addressOneEntry.Changed += ValidateAddress;
                 addressTwoEntry = new Entry();
 
-                addressTable.Attach(countryLabel, 0, 1, 0, 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(regionLabel, 1, 2, 0, 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(cityLabel, 0, 1, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(postCodeLabel, 1, 2, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(addressOneLabel, 0, 1, 4, 5, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(addressTwoLabel, 0, 1, 6, 7, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                uint row = 0;
+                uint wgtSpan = 1;
+                int areaRows = 5;
+                int rowWgts = 2;
 
-                addressTable.Attach(countryCombo, 0, 1, 1, 2, AttachOptions.Shrink, AttachOptions.Shrink, CELL_PAD, CELL_PAD);
-                addressTable.Attach(regionEntry, 1, 2, 1, 2, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(cityEntry, 0, 1, 3, 4, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(postCodeEntry, 1, 2, 3, 4, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(addressOneEntry, 0, 2, 5, 6, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                addressTable.Attach(addressTwoEntry, 0, 2, 7, 8, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                addressTable.Attach(addressLabel, genStart, regionEnd, row, ++row, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+
+                List<Widget> addressWgts = new List<Widget> { null, null, countryLabel, regionLabel, countryCombo, regionEntry, 
+                    cityLabel, postCodeLabel, cityEntry, postCodeEntry};
+
+                for (; row < areaRows; row++) {
+                    addressTable.Attach(addressWgts[(int)row * rowWgts], genStart, genEnd, row, row+ wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                    addressTable.Attach(addressWgts[(int)((row * rowWgts) + wgtSpan)], regionStart, regionEnd, row, row + wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                }
+
+                addressTable.Attach(addressOneLabel, genStart, genEnd, row, row + wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                row++;
+                addressTable.Attach(addressOneEntry, genStart, regionEnd, row, row + wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                row++;
+                addressTable.Attach(addressTwoLabel, genStart, genEnd, row, row + wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                row++;
+                addressTable.Attach(addressTwoEntry, genStart, regionEnd, row, row + wgtSpan, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
 
                 return addressTable;
             }
         }
 
-        protected Table PaymentTable {
+        protected Widget PaymentInfo {
             get {
-                Table paymentTable = new Table(3, 2, true);
+                // First Column
+                uint modelStart = 0;
+                uint modelSpan = 1;
+                uint modelEnd = modelStart + modelSpan;
+
+                // Second Column
+                uint costStart = 1;
+                uint costSpan = 1;
+                uint costEnd = costStart + costSpan;
+
+                uint paymentRows =  3 + (uint) soldBikes.Count;
+                uint paymentColumns = 2;
+                ScrolledWindow bikeCostScroll = new ScrolledWindow();
+                Table paymentTable = new Table(paymentRows, paymentColumns, true);
+
+                Label paymentLabel = new Label("<b>PAYMENT VIA:</b>");
+                paymentLabel.UseMarkup = true;
+                paymentLabel.SetAlignment(H_START, V_MIDDLE);
                 paymentCombo = new ComboBox(paymentOptions);
-                paymentTable.Attach(paymentCombo, 0, 2, 0, 1, AttachOptions.Fill, AttachOptions.Fill, 60, 12);
+                paymentCombo.Changed += ValidatePayment;
+
+                paymentTable.Attach(paymentLabel, modelStart, modelEnd, 0, 1, AttachOptions.Fill, AttachOptions.Fill, 60, 12);
+                paymentTable.Attach(paymentCombo, modelStart, costEnd, 1, 2, AttachOptions.Fill, AttachOptions.Fill, 60, 12);
 
                 Label bikeTitle = new Label("<b>BIKE MODEL:</b>");
                 bikeTitle.UseMarkup = true;
                 Label priceTitle = new Label("<b>COST (GBP):</b>");
                 priceTitle.UseMarkup = true;
 
-                paymentTable.Attach(bikeTitle, 0, 1, 1, 2, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                paymentTable.Attach(priceTitle, 1, 2, 1, 2, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                paymentTable.Attach(bikeTitle, modelStart, modelEnd, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                paymentTable.Attach(priceTitle, costStart, costEnd, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
 
-                uint tableRowCounter = 2;
+                uint tableRowCounter = 3;
                 uint labelSpan = 1;
 
                 foreach (Bike soldBike in soldBikes) {
-                    Label bikeName = new Label(string.Format("{0}, {1}", soldBike.Model, soldBike.Make));
+                    Label bikeName = new Label(string.Format("{0}, {1} ({2})", soldBike.Model, soldBike.Make, soldBike.SecurityCode));
+                    bikeName.Selectable = true;
                     Adjustment priceAdj = new Adjustment(399, 0, 1000000, 1, 10, 10);
                     SpinButton costSpin = new SpinButton(priceAdj, 50, 2);
                     bikePrices.Add(costSpin);
 
-                    paymentTable.Attach(bikeName, 0, 1, tableRowCounter, tableRowCounter + labelSpan, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
-                    paymentTable.Attach(costSpin, 1, 2, tableRowCounter, tableRowCounter + labelSpan, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                    paymentTable.Attach(bikeName, modelStart, modelEnd, tableRowCounter, tableRowCounter + labelSpan, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                    paymentTable.Attach(costSpin, costStart, costEnd, tableRowCounter, tableRowCounter + labelSpan, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
 
                     tableRowCounter++;
                 }
 
-                return paymentTable;
+                bikeCostScroll.Add(paymentTable);
+                return bikeCostScroll;
             }
         }
-
-        protected virtual uint EDITOR_ROWS {
+        
+        protected Widget ReviewSale {
             get {
-                return _EDITOR_ROWS;
+                VBox reviewBox = new VBox();
+
+                string pluralBikes = "";
+                if (soldBikes.Count > 1) {
+                    pluralBikes = "s";
+                }
+
+                Label completeSale = new Label (string.Format("Proceed with the sale of {0} bike{1}?", soldBikes.Count, pluralBikes));
+                reviewBox.PackStart(completeSale, true, true, defPadding);
+
+                return reviewBox;
             }
         }
 
@@ -240,7 +321,39 @@ namespace Cyclone {
             Sale newSale = new Sale(soldBikes, BikeEarnings, clientData, PaymentMethod);
             return newSale;
         }
-        
+
+        void ValidateBasic (object o, EventArgs args) {
+            bool basicEmpty = string.IsNullOrWhiteSpace(nameEntry.Text);
+            basicEmpty = basicEmpty || string.IsNullOrWhiteSpace(surnameEntry.Text);
+            basicEmpty = basicEmpty || string.IsNullOrWhiteSpace(phoneEntry.Text);
+
+            bool emailValid = true;
+            if (!string.IsNullOrWhiteSpace(emailEntry.Text)) {
+                emailValid = emailEntry.Text.Contains('@');
+            }
+
+            bool phoneValid = phoneEntry.Text.Any(char.IsDigit);
+            bool basicValid = !basicEmpty && emailValid && phoneValid;
+
+            SetPageComplete(GetNthPage (CurrentPage), basicValid);
+        }
+
+        void ValidatePayment(object o, EventArgs args) {
+            bool paymentEmpty = paymentCombo.Active == -1;
+            
+            SetPageComplete(GetNthPage (CurrentPage), !paymentEmpty);
+        }
+
+        void ValidateAddress(object o, EventArgs args) {
+            bool addressEmpty = countryCombo.Active == -1;
+            addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(regionEntry.Text);
+            addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(cityEntry.Text);
+            addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(postCodeEntry.Text);
+            addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(addressOneEntry.Text);
+
+            SetPageComplete(GetNthPage (CurrentPage), !addressEmpty);
+        }
+
         protected string AddressCountry {
             get {
                 if (countryCombo.Active == -1) {
@@ -250,7 +363,7 @@ namespace Cyclone {
                 return countryList[countryCombo.Active];
             }
         }
-        
+
         protected int PaymentMethod {
             get {
                 if(paymentCombo.Active == -1) {
@@ -295,9 +408,6 @@ namespace Cyclone {
 
         public string CustomerEmail {
             get {
-                if (string.IsNullOrWhiteSpace(emailEntry.Text)) {
-                    throw new FormatException();
-                }
                 return emailEntry.Text;
             } set {
                 emailEntry.Text = value;
@@ -350,9 +460,6 @@ namespace Cyclone {
 
         public string AddressTwo {
             get {
-                if (string.IsNullOrWhiteSpace(addressTwoEntry.Text)) {
-                    throw new FormatException();
-                }
                 return addressTwoEntry.Text;
             } set {
                 addressTwoEntry.Text = value;
@@ -367,6 +474,11 @@ namespace Cyclone {
                 }
                 return bikeEarnings;
             }
+        }
+
+        void AssistantCancel (object o, EventArgs args) {
+            Console.WriteLine ("Sale assistant cancelled.");
+            Destroy();
         }
     }
 }

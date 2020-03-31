@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace Cyclone.Objects {
     public class Sale {
+        public static int Balance;
+
         public int paymentType;
         public DateTime saleDate;
         public ClientData clientData;
@@ -20,6 +22,8 @@ namespace Cyclone.Objects {
             clientData = client;
             paymentType = payment;
             saleDate = DateTime.Now;
+
+            Balance += Total;
         }
 
         public int Total {

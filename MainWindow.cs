@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Gtk;
 using Cyclone;
+using Cyclone.Objects;
 
 /// <summary>
 /// Main window for Cyclone app.
@@ -124,6 +125,23 @@ public partial class MainWindow : Window {
             }
 
             bikeAmount.Text = string.Format("{0} model{1} in inventory", value, pluralNoun);
+        }
+    }
+
+    /// <summary>
+    /// Updates the bike count.
+    /// </summary>
+    public void Balance() {
+        StoreBalance = Sale.Balance;
+    }
+
+    public int StoreBalance {
+        set {
+            string sign = "";
+            if (value < 0) {
+                sign = "-";
+            }
+            storeBalance.Text = string.Format("Balance: {0}${1}", sign, Math.Abs(value));
         }
     }
 
@@ -356,7 +374,7 @@ public partial class MainWindow : Window {
     private class MainAbout : AboutDialog {
         public MainAbout() {
             ProgramName = "Cyclone";
-            Version = "0.3";
+            Version = "0.4";
             Copyright = "by Sánchez Industries";
             Comments = @"Inventory manager for bike rental business";
             Website = "https://github.com/jacobszpz/Cyclone";
