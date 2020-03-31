@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Gtk;
+using Newtonsoft.Json;
 
 namespace Cyclone
 {
@@ -202,6 +203,7 @@ namespace Cyclone
         /// Gets bike as inventory.
         /// </summary>
         /// <value>Bike as inventory.</value>
+        [JsonIgnore]
         public Dictionary<int, Bike> AsInventory {
             get {
                 return new Dictionary<int, Bike> { 

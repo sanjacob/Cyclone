@@ -37,24 +37,23 @@ namespace Cyclone {
             Title = "Create bike";
         }
 
-        public BikeEditor(Dictionary<string, List<BikeModel>> validModels, 
-            string make, string model, int year, string type, string wheelSize, string forks, int code) {
+        public BikeEditor(Dictionary<string, List<BikeModel>> validModels, Bike bike) {
 
             comboModels = validModels;
             codeDisplay = true;
             createBikeEditor();
 
             Title = "Modify bike";
-            MakeEdit = make;
-            ModelEdit = model;
-            TypeEdit = type;
+            MakeEdit = bike.Make;
+            ModelEdit = bike.Model;
+            TypeEdit = bike.Type;
 
-            YearEdit = year;
-            WheelSizeEdit = wheelSize;
-            ForksEdit = forks;
-            CodeEdit = code;
+            YearEdit = bike.Year;
+            WheelSizeEdit = bike.WheelSize;
+            ForksEdit = bike.Forks;
+            CodeEdit = bike.SecurityCode;
 
-            currentCode = code;
+            currentCode = bike.SecurityCode;
         }
 
         public void createBikeEditor() {

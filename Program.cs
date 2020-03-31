@@ -2,19 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Cyclone.Objects;
 using Gtk;
 using Newtonsoft.Json;
 
 namespace Cyclone {
     class MainClass {
         private const int ROW_T_P = 0;
-        private const int STORE_MAKE_P = 1;
-        private const int STORE_MODEL_P = 2;
-        private const int STORE_TYPE_P = 4;
-        private const int STORE_YEAR_P = 3;
-        private const int STORE_W_S_P = 5;
-        private const int STORE_FORKS_P = 6;
-        private const int STORE_CODE_P = 7;
+        private const int STORE_CODE_P = 5;
 
         private const int MODEL_MAKE_P = 0;
         private const int MODEL_MODEL_P = 1;
@@ -24,34 +19,44 @@ namespace Cyclone {
         private const int MODEL_DEPTH = 1;
         private const int BIKE_DEPTH = 2;
 
+        private const int messageID = 1;
+        private static bool changesSaved = true;
+
         private const string baseInventory = "inventory.txt";
         private const string baseModels = "bikemake.txt";
+        private static string inventorySave;
+        private static string modelsSave;
 
         static TreeStore modelStore;
         static TreeStore bikeStore;
         static TreeStore bikeExpStore;
 
         // NEW MODEL
-        static Dictionary<int, Bike> inventory;
-        static List<BikeModel> validModels;
+        static Dictionary<int, Bike> inventory = new Dictionary<int, Bike>();
+        static List<BikeModel> validModels = new List<BikeModel>();
+
+        static List<Sale> bikeSales;
 
         public static void Main(string[] args) {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string cycloneLocal = Path.Combine(localAppData, "Cyclone");
-            string inventorySave = Path.Combine(cycloneLocal, "inventory.json");
-            string modelsSave = Path.Combine(cycloneLocal, "models.json");
+            inventorySave = Path.Combine(cycloneLocal, "inventory.json");
+            modelsSave = Path.Combine(cycloneLocal, "models.json");
 
             Application.Init();
             MainWindow mainWindow;
             mainWindow = new MainWindow();
+            mainWindow.DeleteEvent += (deleteO, deleteArgs) => OnWindowClosed(deleteO, deleteArgs, mainWindow);
 
             Directory.CreateDirectory(cycloneLocal);
 
             if (File.Exists(inventorySave)) {
-                inventory = JsonConvert.DeserializeObject<Dictionary<int, Bike>>(inventorySave);
+                inventory = JsonConvert.DeserializeObject<Dictionary<int, Bike>>(File.ReadAllText(inventorySave));
+                mainWindow.mainStatus.Push(messageID, "Recovered saved inventory");
             } else { 
                 try {
                     inventory = Parser.ParseInventoryFile(File.ReadAllLines(baseInventory));
+                    mainWindow.mainStatus.Push(messageID, "Recovered base inventory");
                 } catch (FormatException) {
                     mainWindow.SendError("Inventory is not complete");
                 } catch (FileNotFoundException) {
@@ -59,19 +64,34 @@ namespace Cyclone {
                 }
             }
 
-            try {
-                validModels = Parser.ParseModelsFile(File.ReadAllLines(baseModels));
-            } catch (FormatException) {
-                mainWindow.SendError("Models list is not complete");
-            } catch (FileNotFoundException) {
-                mainWindow.SendError("Models list was not found");
+            if (File.Exists(modelsSave)) {
+                validModels = JsonConvert.DeserializeObject<List<BikeModel>>(File.ReadAllText(modelsSave));
+                mainWindow.mainStatus.Push(messageID, "Recovered saved bike models");
+            } else {
+                try {
+                    validModels = Parser.ParseModelsFile(File.ReadAllLines(baseModels));
+                    mainWindow.mainStatus.Push(messageID, "Recovered base bike models");
+                } catch (FormatException) {
+                    mainWindow.SendError("Models list is not complete");
+                } catch (FileNotFoundException) {
+                    mainWindow.SendError("Models list was not found");
+                }
             }
 
             RepopulateModelTree(validModels);
             RepopulateBikeTree(inventory);
-          
+
+            if (File.Exists(inventorySave)) {
+                changesSaved = true;
+            }
+            // TODO REMOVE
+            changesSaved = true;
+
+            mainWindow.mainStatus.Push(messageID, "Populated bike and models tree");
+
             mainWindow.bikeTree.Model = bikeStore;
 
+            mainWindow.mainMenu.saveItem.Activated += (sender, e) => saveFile(sender, e, mainWindow);
             mainWindow.mainMenu.importItem.Activated += (sender, e) => importFile(sender, e, mainWindow);
             mainWindow.mainMenu.exportItem.Activated += (sender, e) => exportFile(sender, e, mainWindow);
             mainWindow.mainMenu.modelsItem.Activated += (sender, e) => editModels(sender, e);
@@ -92,10 +112,56 @@ namespace Cyclone {
             mainWindow.bikeTree.RowActivated += (o, rowArgs) => rowActivate(o, rowArgs, mainWindow);
             mainWindow.bikeToolbar.addBikeButton.Clicked += (sender, e) => addBikeButton(sender, e, mainWindow);
             mainWindow.bikeToolbar.removeBikeButton.Clicked += (sender, e) => removeBikeButton(sender, e, mainWindow);
+            mainWindow.bikeToolbar.sellBikeButton.Clicked += (sender, e) => sellBikeButton(sender, e, mainWindow);
             mainWindow.bikeTree.KeyPressEvent += (o, keyArgs) => SuprRow(o, keyArgs, mainWindow);
             mainWindow.ShowAll();
             mainWindow.Show();
             Application.Run();
+        }
+
+        /// <summary>
+        /// Handles the delete event.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="a">The alpha component.</param>
+        private static void OnWindowClosed(object sender, DeleteEventArgs a, MainWindow mainWindow) {
+            if (!changesSaved) {
+                string confMsg = string.Format("Do you wish to save the inventory?");
+
+                MessageDialog saveConfirm = new MessageDialog(mainWindow,
+                    DialogFlags.DestroyWithParent,
+                    MessageType.Question,
+                    ButtonsType.YesNo, confMsg);
+
+                ResponseType result = (ResponseType)saveConfirm.Run();
+
+                if (result == ResponseType.Yes) {
+                    saveAppData(mainWindow);
+                }
+            }
+    
+            Application.Quit();
+            a.RetVal = true;
+        }
+
+        /// <summary>
+        /// Saves to app folder.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="e">E.</param>
+        /// <param name="mainWindow">Main window.</param>
+        private static void saveFile(object sender, EventArgs e, MainWindow mainWindow) {
+            saveAppData(mainWindow);
+        }
+
+        private static void saveAppData(MainWindow mainWindow) {
+            SaveInventoryToJSON();
+            SaveModelsToJSON();
+            changesSaved = true;
+
+            if (mainWindow != null) {
+                mainWindow.mainStatus.Push(messageID, "Inventory and valid models saved");
+            }
         }
 
         /// <summary>
@@ -121,6 +187,7 @@ namespace Cyclone {
                     int elementsAdded = Bike.BikeCount - oldBikeCount;
 
                     Console.WriteLine(String.Format("Imported {0} bikes from file {1}", elementsAdded, importFilename));
+                    mainWindow.mainStatus.Push(messageID, "Imported file");
                 } else {
                     mainWindow.SendError("File does not exist");
                 }
@@ -169,6 +236,7 @@ namespace Cyclone {
                 RepopulateBikeTree(inventory);
 
                 Console.WriteLine("Cleared Inventory");
+                mainWindow.mainStatus.Push(messageID, "Cleared Inventory");
             }
 
             clearDialog.Destroy();
@@ -250,6 +318,8 @@ namespace Cyclone {
         /// <param name="e">E.</param>
         /// <param name="mainWindow">Main window.</param>
         private static void changeTreeStore(object sender, EventArgs e, MainWindow mainWindow) {
+            mainWindow.mainStatus.Push(messageID, "Changed view mode");
+
             if (mainWindow.bikeTree.Model == bikeStore) {
                 mainWindow.bikeTree.Model = bikeExpStore;
             } else {
@@ -265,29 +335,6 @@ namespace Cyclone {
             string[] makeArray = modelsGrouped.Keys.ToArray();
             List<BikeModel> makeModels = new List<BikeModel>();
             List<string> modelNames = new List<string>();
-
-            //createBikeWin.bikeMakeC.Changed += delegate {
-            //    int makeIndex = createBikeWin.bikeMakeC.Active;
-            //    string make = makeArray[makeIndex];
-
-            //    makeModels = modelsGrouped[make];
-
-            //    foreach (BikeModel makeModel in makeModels) {
-            //        modelNames.Add(makeModel.Model);
-            //    }
-
-            //    createBikeWin.modelCombo(modelNames.ToArray());
-            //};
-
-            //createBikeWin.bikeModelC.Changed += delegate {
-            //    int modelIndex = createBikeWin.bikeModelC.Active;
-
-            //    if (modelIndex != -1) {
-            //        createBikeWin.type = makeModels[modelIndex].Type;
-            //    } else {
-            //        createBikeWin.type = "";
-            //    }
-            //};
 
             createBikeWin.ShowAll();
             createBikeWin.Show();
@@ -313,6 +360,7 @@ namespace Cyclone {
                 AddToInventory(newBike.AsInventory);
                 RepopulateBikeTree(inventory);
 
+                mainWindow.mainStatus.Push(messageID, "Added a new bike");
             } catch (FormatException) {
                 int bikeError = bikeWin.errorType;
 
@@ -403,7 +451,6 @@ namespace Cyclone {
                             // Get reference code and delete from both stores
                             int secCode = (int) activeStore.GetValue(rowIter, STORE_CODE_P);
                             DeleteBike(secCode);
-                            RepopulateBikeTree(inventory);
 
                         } else if (rowType == MODEL_DEPTH) {
                             // Recover in grouped store and delete every child in both stores
@@ -417,14 +464,16 @@ namespace Cyclone {
                                 nextBike = activeStore.IterNext(ref bikeChild);
                             }
 
-                            RepopulateBikeTree(inventory);
                         } else {
                             Console.WriteLine("Not implemented yet");
                         }
                     }
                 }
+
+                RepopulateBikeTree(inventory);
+                mainWindow.mainStatus.Push(messageID, "Deleted some rows");
             }
-            
+
             md.Destroy();
         }
 
@@ -460,16 +509,55 @@ namespace Cyclone {
                         int rowType =  modelStore.IterDepth(rowIter);
 
                         if (rowType == MODEL_DEPTH) {
-                            // Get reference code and delete from both stores
-                            //DeleteModel(rowIter);
+                            string modelMake = (string) modelStore.GetValue(rowIter, MODEL_MAKE_P);
+                            string modelModel = (string) modelStore.GetValue(rowIter, MODEL_MODEL_P);
+                            string modelType = (string) modelStore.GetValue(rowIter, MODEL_TYPE_P);
+
+                            BikeModel bikeModel = new BikeModel(modelMake, modelType, modelModel, true);
+                            DeleteModel(bikeModel);
                         } else if (rowType == MAKE_DEPTH) {
                             editorWindow.SendError("Can't delete make branch, instead select all models");
                         }
                     }
                 }
+
+                RepopulateModelTree(validModels);
             }
             
             md.Destroy();
+        }
+        
+        private static void sellBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
+            List<Bike> soldBikes = new List<Bike>();
+
+            // Work with currently used store
+            TreeStore activeStore = (TreeStore) mainWindow.bikeTree.Model;
+
+            // Get selected rows
+            TreeSelection selectedChildren = mainWindow.bikeTree.Selection;
+            TreePath[] selected = selectedChildren.GetSelectedRows();
+
+            foreach (TreePath bikeRow in selected) {
+                TreeIter rowIter;
+
+                if (activeStore.GetIter(out rowIter, bikeRow)) {
+                    int rowType = (int)activeStore.GetValue(rowIter, ROW_T_P);
+
+                    if (rowType == BIKE_DEPTH) {
+                        // Get reference code and delete from both stores
+                        int secCode = (int)activeStore.GetValue(rowIter, STORE_CODE_P);
+                        soldBikes.Add(inventory[secCode]);
+                    }
+                }
+            }
+            
+            if (soldBikes.Count > 0 && soldBikes.Count < 11) {
+                SaleWindow newSaleWin = new SaleWindow(soldBikes);
+                newSaleWin.ShowAll();
+                newSaleWin.Show();
+            } else {
+                mainWindow.SendError("Select between 1 and 10 bikes to sell");
+            }
         }
 
         private static void rowActivate(object o, RowActivatedArgs args, MainWindow mainWindow) {
@@ -480,18 +568,9 @@ namespace Cyclone {
             int rowType = (int) activeStore.GetValue(rowActive, ROW_T_P);
 
             if (rowType == BIKE_DEPTH) {
-                string make = (string) activeStore.GetValue(rowActive, STORE_MAKE_P);
-                string model = (string) activeStore.GetValue(rowActive, STORE_MODEL_P);
-                string type = (string) activeStore.GetValue(rowActive, STORE_TYPE_P);
-
-                int year;
-                int.TryParse((string) activeStore.GetValue(rowActive, STORE_YEAR_P), out year);
-
-                string wheelSize = (string) activeStore.GetValue(rowActive, STORE_W_S_P);
-                string forks = (string) activeStore.GetValue(rowActive, STORE_FORKS_P);
                 int code = (int) activeStore.GetValue(rowActive, STORE_CODE_P);
 
-                BikeEditor editBikeWin = new BikeEditor(GroupModels(validModels), make, model, year, type, wheelSize, forks, code);
+                BikeEditor editBikeWin = new BikeEditor(GroupModels(validModels), inventory[code]);
 
                 editBikeWin.ShowAll();
                 editBikeWin.Show();
@@ -601,7 +680,7 @@ namespace Cyclone {
             // Create bikeStore if not yet done
             if (bikeStore == null) {
                 bikeStore = new TreeStore(typeof(int), typeof(string), typeof(string),
-                    typeof(string), typeof(string), typeof(string), typeof(string), typeof(int));
+                    typeof(string), typeof(string), typeof(int));
                 
                 // First attribute is an int specifying the type of row
             }
@@ -609,7 +688,7 @@ namespace Cyclone {
             // Create expanded store if not yet created            
             if (bikeExpStore == null) {
                 bikeExpStore = new TreeStore(typeof(int), typeof(string), typeof(string),
-                    typeof(string), typeof(string), typeof(string), typeof(string), typeof(int));
+                    typeof(string), typeof(string), typeof(int));
             }
 
             // Clear both bike stores to re-add contents
@@ -631,19 +710,19 @@ namespace Cyclone {
                         // Append bike child node to TreeStore inside model node, inside make parent node
                         TreeIter storeBike = bikeStore.AppendValues(storeModel, BIKE_DEPTH, 
                             inventoryBike.Make, inventoryBike.Model, inventoryBike.Year, 
-                            inventoryBike.Type, inventoryBike.WheelSize, inventoryBike.Forks,
-                            inventoryBike.SecurityCode);
+                            inventoryBike.Type, inventoryBike.SecurityCode);
 
                         // Append bike to ungrouped store, as parent node
                         TreeIter storeExpBike = bikeExpStore.AppendValues(BIKE_DEPTH, 
                             inventoryBike.Make, inventoryBike.Model, inventoryBike.Year, 
-                            inventoryBike.Type, inventoryBike.WheelSize, inventoryBike.Forks,
-                            inventoryBike.SecurityCode);
+                            inventoryBike.Type, inventoryBike.SecurityCode);
 
                         // TODO: Add Cost attribute
                     }
                 }
             }
+
+            changesSaved = false;
         }
 
         /// <summary>
@@ -794,14 +873,14 @@ namespace Cyclone {
             }
         }
 
-        private void SaveInventoryToJSON(string inventoryFile) {
+        private static void SaveInventoryToJSON() {
             string inventoryJSON = JsonConvert.SerializeObject(inventory);
-            File.WriteAllText(inventoryFile, inventoryJSON);
+            File.WriteAllText(inventorySave, inventoryJSON);
         }
 
-        private void SaveModelsToJSON(string modelsFile) {
+        private static void SaveModelsToJSON() {
             string modelsJSON = JsonConvert.SerializeObject(validModels);
-            File.WriteAllText(modelsFile, modelsJSON);
+            File.WriteAllText(modelsSave, modelsJSON);
         }
     }
 }

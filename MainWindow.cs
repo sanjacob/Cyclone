@@ -11,12 +11,14 @@ public partial class MainWindow : Window {
     public MainMenu mainMenu;
     public MainTools bikeToolbar;
     public TreeView bikeTree;
+    public Statusbar mainStatus;
     public Label bikeAmount;
+    public Label storeBalance;
 
     public const uint defPadding = 20;
     public const int WIN_W = 800;
     public const int WIN_H = 500;
-    public const int ICON_SIDE = 32;
+    public const int ICON_SIDE = 40;
 
     public const int ICON_H = 42;
     public const int ICON_W = 38;
@@ -42,16 +44,13 @@ public partial class MainWindow : Window {
 
         Separator toolSeparator = new Separator(Orientation.Horizontal);
 
-        Statusbar statusbar = new Statusbar();
-        bikeAmount = new Label("0 bikes in inventory");
-        statusbar.PackEnd(bikeAmount, false, true, 0);
+        mainStatus = MainStatusbar;
 
         // Create frame, set border
         Frame mainFrame = new Frame("Bike Inventory");
         // mainFrame.BorderWidth = defPadding;
-        mainFrame.MarginTop = (int)defPadding / 2;
-        mainFrame.MarginBottom = mainFrame.MarginLeft =
-            mainFrame.MarginRight = (int)defPadding;
+        mainFrame.MarginTop = (int) defPadding / 2;
+        mainFrame.MarginLeft = mainFrame.MarginRight = (int) defPadding;
 
         // Create scroller inside frame
         ScrolledWindow scrollWindow = new ScrolledWindow();
@@ -66,7 +65,7 @@ public partial class MainWindow : Window {
         windowBox.PackStart(bikeToolbar, false, false, 0);
         windowBox.PackStart(toolSeparator, false, false, 0);
 
-        windowBox.PackEnd(statusbar, false, false, 0);
+        windowBox.PackEnd(mainStatus, false, false, 0);
         windowBox.PackEnd(mainFrame, true, true, 0);
     }
 
@@ -94,19 +93,6 @@ public partial class MainWindow : Window {
     /// <param name="sender">Sender.</param>
     /// <param name="a">The alpha component.</param>
     protected void OnDeleteEvent(object sender, DeleteEventArgs a) {
-        string confMsg = string.Format("Do you wish to save the inventory?");
-
-        MessageDialog saveConfirm = new MessageDialog(this,
-            DialogFlags.DestroyWithParent,
-            MessageType.Question,
-            ButtonsType.YesNo, confMsg);
-
-        ResponseType result = (ResponseType)saveConfirm.Run();
-
-        if (result == ResponseType.Yes) {
-
-        }
-
         Application.Quit();
         a.RetVal = true;
     }
@@ -132,12 +118,12 @@ public partial class MainWindow : Window {
     public int BikeAmount {
         set {
             string pluralNoun = "s";
-    
+
             if (value == 1) {
                 pluralNoun = "";
             }
-    
-            bikeAmount.Text = string.Format("{0} model{1} in inventory", value, pluralNoun);    
+
+            bikeAmount.Text = string.Format("{0} model{1} in inventory", value, pluralNoun);
         }
     }
 
@@ -151,7 +137,7 @@ public partial class MainWindow : Window {
             MessageType.Error,
             ButtonsType.Close, errorMsg);
 
-        ResponseType yearRes = (ResponseType) yearError.Run();
+        ResponseType yearRes = (ResponseType)yearError.Run();
 
         if (yearRes == ResponseType.Close) {
             yearError.Destroy();
@@ -164,6 +150,7 @@ public partial class MainWindow : Window {
     public class MainMenu : MenuBar {
         public ImageMenuItem importItem;
         public ImageMenuItem exportItem;
+        public ImageMenuItem saveItem;
         public MenuItem modelsItem;
         public MenuItem clearItem;
         public CheckMenuItem changeView;
@@ -202,13 +189,20 @@ public partial class MainWindow : Window {
                 exportItem = new ImageMenuItem(Stock.SaveAs, fileAccel) {
                     Label = "Export"
                 };
+                
+                 // Create 'Export' button on 'File'
+                saveItem = new ImageMenuItem(Stock.Save, fileAccel) {
+                    Label = "Save"
+                };
 
                 importItem.AddAccelerator("activate", fileAccel,
                     new AccelKey(Gdk.Key.i, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
                 exportItem.AddAccelerator("activate", fileAccel,
                     new AccelKey(Gdk.Key.e, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
-
+                saveItem.AddAccelerator("activate", fileAccel,
+                    new AccelKey(Gdk.Key.s, Gdk.ModifierType.ControlMask, AccelFlags.Visible));
                 // Append all items to each tab
+                fileMenu.Append(saveItem);
                 fileMenu.Append(importItem);
                 fileMenu.Append(exportItem);
                 fileItem.Submenu = fileMenu;
@@ -284,6 +278,8 @@ public partial class MainWindow : Window {
     public class MainTools : Toolbar {
         public ToolButton addBikeButton;
         public ToolButton removeBikeButton;
+        public ToolButton buyBikeButton;
+        public ToolButton sellBikeButton;
 
         public MainTools() {
             Gdk.Pixbuf addBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
@@ -294,11 +290,27 @@ public partial class MainWindow : Window {
                 "Cyclone.Assets.Close.png", ICON_SIDE, ICON_SIDE);
             Image removeBikeImg = new Image(removeBikeIcon);
 
+            Gdk.Pixbuf buyBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.Cart.png", ICON_SIDE, ICON_SIDE);
+            Image buyBikeImg = new Image(buyBikeIcon);
+
+            Gdk.Pixbuf sellBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.SellBike.png", ICON_SIDE, ICON_SIDE);
+            Image sellBikeImg = new Image(sellBikeIcon);
+
             addBikeButton = new ToolButton(addBikeImg, "Add Bike");
             removeBikeButton = new ToolButton(removeBikeImg, "Remove Bike");
+            buyBikeButton = new ToolButton(buyBikeImg, "Buy Bike");
+            sellBikeButton = new ToolButton(sellBikeImg, "Sell Bike");
+
+            SeparatorToolItem commerceActionsSeparator = new SeparatorToolItem();
+
 
             Insert(addBikeButton, 0);
             Insert(removeBikeButton, 1);
+            Insert(commerceActionsSeparator, 2);
+            Insert(buyBikeButton, 3);
+            Insert(sellBikeButton, 4);
         }
     }
 
@@ -356,6 +368,24 @@ public partial class MainWindow : Window {
             Gdk.Pixbuf aboutIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
                 "Cyclone.Assets.Cyclone.png", ICON_W, ICON_H);
             Logo = aboutIcon;
+        }
+    }
+
+    private Statusbar MainStatusbar {
+        get {
+            Statusbar statusbar = new Statusbar();
+
+            bikeAmount = new Label("0 bikes in inventory");
+            storeBalance = new Label("Balance: $402.09");
+            Separator balanceSeparator = new Separator(Orientation.Vertical);
+            balanceSeparator.MarginLeft = (int) defPadding;
+            balanceSeparator.MarginRight = (int) defPadding;
+
+            statusbar.PackEnd(storeBalance, false, true, 0);
+            statusbar.PackStart(bikeAmount, false, true, 0);
+            statusbar.PackStart(balanceSeparator, false, false, 0);
+
+            return statusbar;
         }
     }
 }

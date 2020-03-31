@@ -33,6 +33,7 @@
     </Reference>
     <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
       <Package>gtk-sharp-2.0</Package>
+      <Private>True</Private>
     </Reference>
     <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
       <Package>gtk-sharp-2.0</Package>
@@ -56,6 +57,10 @@
     <Compile Include="gtk-gui\MainWindow.cs" />
     <Compile Include="Objects\BikeModel.cs" />
     <Compile Include="ModelEditor.cs" />
+    <Compile Include="Objects\Sale.cs" />
+    <Compile Include="Objects\ClientData.cs" />
+    <Compile Include="Objects\Address.cs" />
+    <Compile Include="SaleWindow.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Objects\" />
@@ -73,6 +78,9 @@
     <EmbeddedResource Include="gtk-gui\gui.stetic">
       <LogicalName>gui.stetic</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Assets\Cart.png" />
+    <EmbeddedResource Include="Assets\Money.png" />
+    <EmbeddedResource Include="Assets\SellBike.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
