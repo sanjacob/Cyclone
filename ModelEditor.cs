@@ -32,7 +32,7 @@ namespace Cyclone {
 
         protected uint defPadding = 20;
         protected int WIN_W = 400;
-        protected int WIN_H = 200;
+        private int _WIN_H = 240;
         protected const int ICON_SIDE = 32;
 
         public ModelEditor() : base(WindowType.Toplevel) {
@@ -51,8 +51,11 @@ namespace Cyclone {
 
         public void createEditor() {
             EditorProperties();
+            ScrolledWindow editorScroll = new ScrolledWindow();
+
             editorTable = ModelTable;
-            Add(editorTable);
+            editorScroll.Add(editorTable);
+            Add(editorScroll);
         }
         
         private void EditorProperties() {
@@ -135,6 +138,12 @@ namespace Cyclone {
                 return typeEntry.Text;
             } set {
                 typeEntry.Text = value;
+            }
+        }
+
+        protected virtual int WIN_H {
+            get {
+                return _WIN_H;
             }
         }
 

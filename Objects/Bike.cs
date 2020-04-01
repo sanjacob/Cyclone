@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Cyclone.Objects;
 using Gtk;
 using Newtonsoft.Json;
 
@@ -21,6 +22,22 @@ namespace Cyclone
         private string _forks;
         private int _securityCode;
         private double _cost;
+        private string _frame;
+        public string FrontDerailleur { get; set; }
+        public string RearDerailleur { get; set; }
+        public int Gears { get; set; }
+        public string Shifters { get; set; }
+        public string ChainSet { get; set; }
+        public string Chain { get; set; }
+        public string BrakeSet { get; set; }
+        public string Handlebars { get; set; }
+        public string Stem { get; set; }
+        public string Rims { get; set; }
+        public string Tyres { get; set; }
+        public string Saddle { get; set; }
+        public double Weight { get; set; }
+        public bool WasBought { get; set; }
+
         private static int bikeTotal;
 
         /// <summary>
@@ -149,10 +166,18 @@ namespace Cyclone
         public double Cost {
             get {
                 return _cost;
-            }
-
-            set {
+            } set {
                 _cost = value;
+                WasBought = true;
+                Sale.Balance -= value;
+            }
+        }
+
+        public string Frame {
+            get {
+                return _frame;
+            } set {
+                _frame = value;
             }
         }
 

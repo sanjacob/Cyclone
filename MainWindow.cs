@@ -135,7 +135,7 @@ public partial class MainWindow : Window {
         StoreBalance = Sale.Balance;
     }
 
-    public int StoreBalance {
+    public double StoreBalance {
         set {
             string sign = "";
             if (value < 0) {
@@ -296,7 +296,6 @@ public partial class MainWindow : Window {
     public class MainTools : Toolbar {
         public ToolButton addBikeButton;
         public ToolButton removeBikeButton;
-        public ToolButton buyBikeButton;
         public ToolButton sellBikeButton;
 
         public MainTools() {
@@ -308,27 +307,20 @@ public partial class MainWindow : Window {
                 "Cyclone.Assets.Close.png", ICON_SIDE, ICON_SIDE);
             Image removeBikeImg = new Image(removeBikeIcon);
 
-            Gdk.Pixbuf buyBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                "Cyclone.Assets.Cart.png", ICON_SIDE, ICON_SIDE);
-            Image buyBikeImg = new Image(buyBikeIcon);
-
             Gdk.Pixbuf sellBikeIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
                 "Cyclone.Assets.SellBike.png", ICON_SIDE, ICON_SIDE);
             Image sellBikeImg = new Image(sellBikeIcon);
 
             addBikeButton = new ToolButton(addBikeImg, "Add Bike");
             removeBikeButton = new ToolButton(removeBikeImg, "Remove Bike");
-            buyBikeButton = new ToolButton(buyBikeImg, "Buy Bike");
             sellBikeButton = new ToolButton(sellBikeImg, "Sell Bike");
 
             SeparatorToolItem commerceActionsSeparator = new SeparatorToolItem();
 
-
             Insert(addBikeButton, 0);
             Insert(removeBikeButton, 1);
             Insert(commerceActionsSeparator, 2);
-            Insert(buyBikeButton, 3);
-            Insert(sellBikeButton, 4);
+            Insert(sellBikeButton, 3);
         }
     }
 
@@ -394,7 +386,7 @@ public partial class MainWindow : Window {
             Statusbar statusbar = new Statusbar();
 
             bikeAmount = new Label("0 bikes in inventory");
-            storeBalance = new Label("Balance: $402.09");
+            storeBalance = new Label("Balance: $0");
             Separator balanceSeparator = new Separator(Orientation.Vertical);
             balanceSeparator.MarginLeft = (int) defPadding;
             balanceSeparator.MarginRight = (int) defPadding;

@@ -36,6 +36,7 @@ namespace Cyclone {
         static List<BikeModel> validModels = new List<BikeModel>();
 
         static List<Sale> bikeSales = new List<Sale>();
+        static List<Bike> bikePurchases = new List<Bike>();
 
         public static void Main(string[] args) {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -85,7 +86,7 @@ namespace Cyclone {
                 changesSaved = true;
             }
             // TODO REMOVE
-            changesSaved = true;
+            //changesSaved = true;
 
             mainWindow.mainStatus.Push(messageID, "Populated bike and models tree");
 
@@ -359,6 +360,11 @@ namespace Cyclone {
 
                 AddToInventory(newBike.AsInventory);
                 RepopulateBikeTree(inventory);
+                mainWindow.Balance();
+
+                if (newBike.WasBought) {
+                    bikePurchases.Add(newBike);
+                }
 
                 mainWindow.mainStatus.Push(messageID, "Added a new bike");
             } catch (FormatException) {
@@ -368,6 +374,8 @@ namespace Cyclone {
                     mainWindow.SendError("Please enter a valid year");
                 } else if (bikeError == BikeEditor.ERROR_CODE) {
                     mainWindow.SendError("Please enter a valid code");
+                } else if (bikeError == BikeEditor.ERROR_COST) {
+                    mainWindow.SendError("Please enter a valid price for the bike");
                 } else {
                     mainWindow.SendError("Please fill in all mandatory fields");
                 } 

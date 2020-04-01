@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Cyclone.Objects {
     public class Sale {
-        public static int Balance;
+        public static double Balance;
 
         public int paymentType;
         public DateTime saleDate;
