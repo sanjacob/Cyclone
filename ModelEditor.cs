@@ -43,7 +43,7 @@ namespace Cyclone {
             oldModel = editedModel;
             createEditor();
 
-            Title = "Modify model";
+            Title = "Modify Model - Cyclone";
             MakeEdit = editedModel.Make;
             ModelEdit = editedModel.Model;
             TypeEdit = editedModel.Type;
@@ -62,7 +62,7 @@ namespace Cyclone {
             SetDefaultSize(WIN_W, WIN_H);
             SetSizeRequest(WIN_W, WIN_H);
             //Resizable = false;
-            Title = "Create model";
+            Title = "Create Model - Cyclone";
 
             // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),

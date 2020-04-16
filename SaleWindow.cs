@@ -13,7 +13,7 @@ namespace Cyclone {
         private Entry emailEntry;
         private Entry phoneEntry;
 
-        private ComboBox paymentCombo;
+        protected ComboBox paymentCombo;
         private List<SpinButton> bikePrices = new List<SpinButton>();
 
         private ComboBox countryCombo;
@@ -24,8 +24,8 @@ namespace Cyclone {
         private Entry addressOneEntry;
         private Entry addressTwoEntry;
 
-        private List<Bike> soldBikes;
-        string[] paymentOptions = { "Cash", "Card", "Paypal" };
+        protected List<Bike> soldBikes;
+        protected string[] paymentOptions = { "Cash", "Card", "Paypal" };
 
         public const int WIN_W = 180;
         public const int WIN_H = 120;
@@ -51,7 +51,7 @@ namespace Cyclone {
 
             Widget paymentPage = PaymentInfo;
             AppendPage(paymentPage);
-            SetPageTitle(paymentPage, "Bike Costs And Payment");
+            SetPageTitle(paymentPage, bikeCostsTitle);
             SetPageType (paymentPage, AssistantPageType.Content);
 
             Widget addressPage = CustomerAddress;
@@ -62,7 +62,7 @@ namespace Cyclone {
             Widget completeSale = ReviewSale;
             AppendPage (completeSale);
 
-            SetPageTitle (completeSale, "Review Sale");
+            SetPageTitle (completeSale, reviewTitle);
             SetPageType (completeSale, AssistantPageType.Confirm);
             SetPageComplete(completeSale, true);
         }
@@ -79,7 +79,7 @@ namespace Cyclone {
 
             // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
-                     "Cyclone.Assets.Money.png", ICON_SIDE, ICON_SIDE);
+                     iconName, ICON_SIDE, ICON_SIDE);
             Icon = windowIcon;
 
             Cancel += AssistantCancel;
@@ -189,7 +189,7 @@ namespace Cyclone {
                 Label addressOneLabel = new Label("Street and House No.*");
                 addressOneLabel.SetAlignment(H_START, V_MIDDLE);
 
-                Label addressTwoLabel = new Label("Apartment, Suite, Unit, Floor*");
+                Label addressTwoLabel = new Label("Apartment, Suite, Unit, Floor");
                 addressTwoLabel.SetAlignment(H_START, V_MIDDLE);
 
                 countryList = GetCountries();
@@ -233,7 +233,7 @@ namespace Cyclone {
             }
         }
 
-        protected Widget PaymentInfo {
+        protected virtual Widget PaymentInfo {
             get {
                 // First Column
                 uint modelStart = 0;
@@ -288,7 +288,7 @@ namespace Cyclone {
             }
         }
         
-        protected Widget ReviewSale {
+        protected virtual Widget ReviewSale {
             get {
                 VBox reviewBox = new VBox();
 
@@ -322,7 +322,7 @@ namespace Cyclone {
             return newSale;
         }
 
-        void ValidateBasic (object o, EventArgs args) {
+        protected void ValidateBasic (object o, EventArgs args) {
             bool basicEmpty = string.IsNullOrWhiteSpace(nameEntry.Text);
             basicEmpty = basicEmpty || string.IsNullOrWhiteSpace(surnameEntry.Text);
             basicEmpty = basicEmpty || string.IsNullOrWhiteSpace(phoneEntry.Text);
@@ -338,13 +338,13 @@ namespace Cyclone {
             SetPageComplete(GetNthPage (CurrentPage), basicValid);
         }
 
-        void ValidatePayment(object o, EventArgs args) {
+        protected void ValidatePayment(object o, EventArgs args) {
             bool paymentEmpty = paymentCombo.Active == -1;
             
             SetPageComplete(GetNthPage (CurrentPage), !paymentEmpty);
         }
 
-        void ValidateAddress(object o, EventArgs args) {
+        protected void ValidateAddress(object o, EventArgs args) {
             bool addressEmpty = countryCombo.Active == -1;
             addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(regionEntry.Text);
             addressEmpty = addressEmpty || string.IsNullOrWhiteSpace(cityEntry.Text);
@@ -479,6 +479,24 @@ namespace Cyclone {
         void AssistantCancel (object o, EventArgs args) {
             Console.WriteLine ("Sale assistant cancelled.");
             Destroy();
+        }
+ 
+        protected virtual string iconName {
+            get { 
+                return "Cyclone.Assets.Money.png";
+            }
+        }
+        
+        protected virtual string reviewTitle {
+            get { 
+                return "Review Sale";
+            }
+        }
+
+        protected virtual string bikeCostsTitle {
+            get { 
+                return "Bike Costs And Payment";
+            }
         }
     }
 }

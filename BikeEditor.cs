@@ -52,7 +52,7 @@ namespace Cyclone {
         public BikeEditor(Dictionary<string, List<BikeModel>> validModels) {
             comboModels = validModels;
             createBikeEditor();
-            Title = "Create bike";
+            Title = "Create Bike - Cyclone";
         }
 
         public BikeEditor(Dictionary<string, List<BikeModel>> validModels, Bike bike) {
@@ -61,7 +61,7 @@ namespace Cyclone {
             codeDisplay = true;
             createBikeEditor();
 
-            Title = "Modify bike";
+            Title = "Modify Bike - Cyclone";
             MakeEdit = bike.Make;
             ModelEdit = bike.Model;
             TypeEdit = bike.Type;
