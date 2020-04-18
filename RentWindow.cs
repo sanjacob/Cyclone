@@ -5,6 +5,7 @@ using Gtk;
 
 namespace Cyclone {
     public class RentWindow : SaleWindow {
+        private SpinButton rateSpin;
 
         public RentWindow(List<Bike> rentedBikes) : base(rentedBikes) {
         }
@@ -13,7 +14,7 @@ namespace Cyclone {
             get {
                 // First Column
                 uint modelStart = 0;
-                uint modelSpan = 2;
+                uint modelSpan = 1;
                 uint modelEnd = modelStart + modelSpan;
 
                 // Second Column
@@ -38,9 +39,18 @@ namespace Cyclone {
                 Label bikeTitle = new Label("<b>BIKES TO RENT:</b>");
                 bikeTitle.UseMarkup = true;
 
-                paymentTable.Attach(bikeTitle, modelStart, modelEnd, 2, 3, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                Label hourlyRateTitle = new Label("<b>HOURLY RENT RATE:</b>");
+                hourlyRateTitle.UseMarkup = true;
 
-                uint tableRowCounter = 3;
+                Adjustment rateAdj = new Adjustment(42, 0, 1000, 1, 10, 10);
+                rateSpin = new SpinButton(rateAdj, 50, 2);
+
+                uint tableRowCounter = 2;
+                paymentTable.Attach(bikeTitle, modelStart, modelEnd, tableRowCounter, tableRowCounter + 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                paymentTable.Attach(hourlyRateTitle, costStart, costEnd, tableRowCounter, tableRowCounter + 1, AttachOptions.Fill, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+                tableRowCounter++;
+                paymentTable.Attach(rateSpin, costStart, costEnd, tableRowCounter, tableRowCounter + 1, AttachOptions.Expand, AttachOptions.Fill, CELL_PAD, CELL_PAD);
+
                 uint labelSpan = 1;
 
                 foreach (Bike soldBike in soldBikes) {
@@ -76,8 +86,14 @@ namespace Cyclone {
         public Rent ParseRent() {
             Address clientAddress = new Address(AddressCountry, AddressRegion, AddressCity, AddressOne, AddressTwo, AddressCode);
             ClientData clientData = new ClientData(CustomerName, CustomerSurname, CustomerPhone, clientAddress);
-            Rent newRent = new Rent(soldBikes, clientData, PaymentMethod);
+            Rent newRent = new Rent(soldBikes, clientData, PaymentMethod, HourlyRate);
             return newRent;
+        }
+
+        private double HourlyRate {
+            get {
+                return rateSpin.Value;
+            }
         }
 
         protected override string iconName { 

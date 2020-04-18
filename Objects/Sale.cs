@@ -31,5 +31,11 @@ namespace Cyclone.Objects {
                 return bikeEarnings.AsParallel().Sum();
             }
         }
+
+        public string Buyer {
+            get {
+                return string.Format("{0} {1}", clientData.Name, clientData.Surname);
+            }
+        }
     }
 }

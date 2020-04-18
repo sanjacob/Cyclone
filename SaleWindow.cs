@@ -318,6 +318,8 @@ namespace Cyclone {
         public Sale ParseSale() {
             Address clientAddress = new Address(AddressCountry, AddressRegion, AddressCity, AddressOne, AddressTwo, AddressCode);
             ClientData clientData = new ClientData(CustomerName, CustomerSurname, CustomerPhone, clientAddress);
+            clientData.Mail = CustomerEmail;
+
             Sale newSale = new Sale(soldBikes, BikeEarnings, clientData, PaymentMethod);
             return newSale;
         }
@@ -366,7 +368,7 @@ namespace Cyclone {
 
         protected int PaymentMethod {
             get {
-                if(paymentCombo.Active == -1) {
+                if (paymentCombo.Active == -1) {
                     throw new IndexOutOfRangeException();
                 }
                 return paymentCombo.Active;

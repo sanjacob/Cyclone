@@ -22,6 +22,7 @@ namespace Cyclone
         private string _forks;
         private int _securityCode;
         private double _cost;
+        private DateTime purchaseDate;
         private string _frame;
         public string FrontDerailleur { get; set; }
         public string RearDerailleur { get; set; }
@@ -170,6 +171,16 @@ namespace Cyclone
                 _cost = value;
                 WasBought = true;
                 Sale.Balance -= value;
+                purchaseDate = DateTime.Now;
+            }
+        }
+
+        public DateTime PurchaseDate {
+            get {
+                if (!WasBought) {
+                    throw new InvalidOperationException();    
+                }
+                return purchaseDate;
             }
         }
 

@@ -64,6 +64,7 @@
     <Compile Include="ActiveRentals.cs" />
     <Compile Include="BaseViewer.cs" />
     <Compile Include="MainWindow.cs" />
+    <Compile Include="Objects\Exporter.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Objects\" />
@@ -86,6 +87,7 @@
     <EmbeddedResource Include="Assets\SellBike.png" />
     <EmbeddedResource Include="Assets\RentBike.png" />
     <EmbeddedResource Include="Assets\Clock.png" />
+    <EmbeddedResource Include="Assets\Search.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,16 +1,16 @@
 # Cyclone
-#### Bike business management utility  
+#### Bike rental and sale business management tool  
 
 ![Cyclone has multiple features to help manage your bike inventory.](Screenshots/01.png  "Main Interface")
 
 #### Features  
-* Add and purchase bikes
-* Remove bikes
-* Sell bikes, record client information and address
-* Keep track of your monetary balance
+* Add, purchase and remove bikes
+* Sell and rent bikes, recording client information, address and payment
+* Keep track of your finances
 * Program data is saved between uses
-* Keep a specific list of valid bike models and edit it
-* Switch between a grouped view and expanded one
+* Validation of bike models via customisable valid model list
+* Choose between two different view modes
+* Export different types of report to a text file, about sales, rents or purchases
 
 ![Cyclone has multiple features to help manage your bike inventory.](Screenshots/02.png  "Sales Assistant")
 

@@ -7,32 +7,45 @@ namespace Cyclone.Objects {
 
         public int paymentType;
         public DateTime rentStartDate;
-        private ClientData clientData;
+        public DateTime rentEndDate;
+
+        public ClientData clientData;
         public List<Bike> rentedBikes;
         public double rentEarnings;
+        public TimeSpan duration;
         
         public const int CASH = 0;
         public const int CARD = 1;
         public const int PAYPAL = 2;
 
         // Hourly rent rate per bike
-        private static int hourlyRate = 20;
+        private double hourlyRate;
+        public bool concluded;
 
-        public Rent(List<Bike> rentedBikes, ClientData client, int payment) {
+        public Rent(List<Bike> rentedBikes, ClientData client, int payment, double rate) {
             this.rentedBikes = rentedBikes;
             clientData = client;
             paymentType = payment;
             rentStartDate = DateTime.Now;
+            hourlyRate = rate;
             RentalsCount++;
         }
         
         public double CalculateTotal {
             get {
                 // Get span of time in hours, multiply by hourly rate and number of bikes
-                TimeSpan rentTime = DateTime.Now.Subtract(rentStartDate);
-                rentEarnings = rentTime.TotalDays * rentedBikes.Count * hourlyRate;
+                rentEndDate = DateTime.Now;
+                TimeSpan rentTime = rentEndDate.Subtract(rentStartDate);
+                rentEarnings = rentTime.TotalHours * rentedBikes.Count * hourlyRate;
+                rentEarnings = Math.Round(rentEarnings, 2);
                 return rentEarnings;
             }
+        }
+
+        public void Finish() {
+            Sale.Balance += rentEarnings;
+            duration = rentEndDate.Subtract(rentStartDate);
+            concluded = true;
         }
 
         public string RentalSummary {
@@ -51,7 +64,7 @@ namespace Cyclone.Objects {
             }
         }
 
-        public string Renter{
+        public string Renter {
             get {
                 return string.Format("{0} {1}", clientData.Name, clientData.Surname);
             }

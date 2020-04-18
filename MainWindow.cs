@@ -20,7 +20,8 @@ public sealed class MainWindow : BaseViewer {
     public ToolButton sellBikeButton;
     public ToolButton rentBikeButton;
     public ToolButton rentalsButton;
-    
+    public ToolButton searchButton;
+
     public ImageMenuItem importItem;
     public ImageMenuItem exportItem;
     public ImageMenuItem saveItem;
@@ -35,6 +36,7 @@ public sealed class MainWindow : BaseViewer {
     /// Initializes a new instance of the <see cref="T:MainWindow"/> class.
     /// </summary>
     public MainWindow() {
+        Modal = false;
         uint basePadding = 0;
 
         // Create menu bar
@@ -169,7 +171,7 @@ public sealed class MainWindow : BaseViewer {
 
             // Create 'Export' button on 'File'
             exportItem = new ImageMenuItem(Stock.SaveAs, fileAccel) {
-                Label = "Export"
+                Label = "Generate Report"
             };
 
             // Create 'Export' button on 'File'
@@ -279,22 +281,28 @@ public sealed class MainWindow : BaseViewer {
                 "Cyclone.Assets.Clock.png", ICON_W, ICON_W);
             Image rentalsImg = new Image(rentalsIcon);
 
+            Gdk.Pixbuf searchIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
+                "Cyclone.Assets.Search.png", ICON_W, ICON_W);
+            Image searchImg = new Image(searchIcon);
+
             addBikeButton = new ToolButton(addBikeImg, "Add Bike");
             removeBikeButton = new ToolButton(removeBikeImg, "Remove Bike");
             sellBikeButton = new ToolButton(sellBikeImg, "Sell Bike");
             rentBikeButton = new ToolButton(rentBikeImg, "Rent Bike");
             rentalsButton = new ToolButton(rentalsImg, "Active Rentals");
+            searchButton = new ToolButton(searchImg, "Lookup Code");
 
             SeparatorToolItem commerceActionsSeparator = new SeparatorToolItem();
             SeparatorToolItem activeListsSeparator = new SeparatorToolItem();
+            ToolItem[] barButtons = { addBikeButton, removeBikeButton, 
+                commerceActionsSeparator, sellBikeButton, rentBikeButton, 
+                activeListsSeparator, rentalsButton, searchButton };
 
-            editToolbar.Insert(addBikeButton, 0);
-            editToolbar.Insert(removeBikeButton, 1);
-            editToolbar.Insert(commerceActionsSeparator, 2);
-            editToolbar.Insert(sellBikeButton, 3);
-            editToolbar.Insert(rentBikeButton, 4);
-            editToolbar.Insert(activeListsSeparator, 5);
-            editToolbar.Insert(rentalsButton, 6);
+            int itemIndex = 0;
+            foreach (ToolItem item in barButtons) {
+                editToolbar.Insert(item, itemIndex);
+                itemIndex++;
+            }
             return editToolbar;
         }
     }
@@ -342,7 +350,7 @@ public sealed class MainWindow : BaseViewer {
         get {
             AboutDialog aboutDialog = new AboutDialog();
             aboutDialog.ProgramName = "Cyclone";
-            aboutDialog.Version = "0.6";
+            aboutDialog.Version = "0.8";
             aboutDialog.Copyright = "by Sánchez Industries";
             aboutDialog.Comments = @"Inventory manager for bike rental business";
             aboutDialog.Website = "https://github.com/jacobszpz/Cyclone";

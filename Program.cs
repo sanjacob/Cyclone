@@ -20,6 +20,7 @@ namespace Cyclone {
         private const int BIKE_DEPTH = 2;
 
         private const int messageID = 1;
+        private const int tempMsgID = 2;
         private static bool changesSaved = true;
 
         private const string baseInventory = "inventory.txt";
@@ -36,8 +37,10 @@ namespace Cyclone {
         static Dictionary<int, Bike> inventory = new Dictionary<int, Bike>();
         static List<BikeModel> validModels = new List<BikeModel>();
 
+        // TODO: SAVE ALL THESE LISTS BEFORE CLOSING PROGRAM
         static List<Sale> bikeSales = new List<Sale>();
         static List<Rent> bikeRentals = new List<Rent>();
+        static List<Rent> archiveRentals = new List<Rent>();
         static List<Bike> bikePurchases = new List<Bike>();
 
         public static void Main(string[] args) {
@@ -97,7 +100,7 @@ namespace Cyclone {
             mainWindow.saveItem.Activated += (sender, e) => saveFile(sender, e, mainWindow);
             mainWindow.importItem.Activated += (sender, e) => importFile(sender, e, mainWindow);
             mainWindow.exportItem.Activated += (sender, e) => exportFile(sender, e, mainWindow);
-            mainWindow.modelsItem.Activated += (sender, e) => editModels(sender, e);
+            mainWindow.modelsItem.Activated += (sender, e) => editModels(sender, e, mainWindow);
             mainWindow.clearItem.Activated += (sender, e) => clearInventory(sender, e, mainWindow);
 
             mainWindow.changeView.Toggled += (sender, e) => changeTreeStore(sender, e, mainWindow);
@@ -118,6 +121,7 @@ namespace Cyclone {
             mainWindow.sellBikeButton.Clicked += (sender, e) => sellBikeButton(sender, e, mainWindow);
             mainWindow.rentBikeButton.Clicked += (sender, e) => rentBikeButton(sender, e, mainWindow);
             mainWindow.rentalsButton.Clicked += (sender, e) => activeRentalsButton(sender, e, mainWindow);
+            mainWindow.searchButton.Clicked += (sender, e) => LookupBike(sender, e, mainWindow);
 
             mainWindow.BaseTree.KeyPressEvent += (o, keyArgs) => SuprRow(o, keyArgs, mainWindow);
             mainWindow.ShowAll();
@@ -194,7 +198,7 @@ namespace Cyclone {
                     RepopulateBikeTree(inventory);
                     int elementsAdded = Bike.BikeCount - oldBikeCount;
 
-                    Console.WriteLine(String.Format("Imported {0} bikes from file {1}", elementsAdded, importFilename));
+                    Console.WriteLine(string.Format("Imported {0} bikes from file {1}", elementsAdded, importFilename));
                     mainWindow.BaseStatusbar.Push(messageID, "Imported file");
                 } else {
                     mainWindow.SendError("File does not exist");
@@ -211,12 +215,48 @@ namespace Cyclone {
         /// <param name="e">E.</param>
         /// <param name="mainWindow">Main window.</param>
         private static void exportFile(object sender, EventArgs e, MainWindow mainWindow) {
+            // Choose report type
             FileChooserDialog exportFileDiag = new FileChooserDialog("Create A Report - Cyclone", 
                 mainWindow, FileChooserAction.Save, 
                 "Cancel",ResponseType.Cancel, "Save",ResponseType.Accept);
-            
+
+            exportFileDiag.DoOverwriteConfirmation = true;
+
+            FileFilter purchasesFilter = new FileFilter();
+            FileFilter salesFilter = new FileFilter();
+            FileFilter activeRentalsFilter = new FileFilter();
+            FileFilter allRentalsFilter = new FileFilter();
+
+            purchasesFilter.AddPattern("*.txt");
+            salesFilter.AddPattern("*.txt");
+            activeRentalsFilter.AddPattern("*.txt");
+            allRentalsFilter.AddPattern("*.txt");
+
+            purchasesFilter.Name = "All Purchases (*.txt)";
+            salesFilter.Name = "All Sales (*.txt)";
+            activeRentalsFilter.Name = "Active Rentals (*.txt)";
+            allRentalsFilter.Name = "Past Rentals (*.txt)";
+
+            exportFileDiag.AddFilter(purchasesFilter);
+            exportFileDiag.AddFilter(salesFilter);
+            exportFileDiag.AddFilter(activeRentalsFilter);
+            exportFileDiag.AddFilter(allRentalsFilter);
+
             if (exportFileDiag.Run() == (int) ResponseType.Accept) {
-                Console.WriteLine(exportFileDiag.Filename);
+                List<string> report = new List<string>();
+
+                if (exportFileDiag.Filter.Name == purchasesFilter.Name){
+                    report = Exporter.PurchasesReport(bikePurchases);
+                } else if (exportFileDiag.Filter.Name == salesFilter.Name){
+                    report = Exporter.SalesReport(bikeSales);
+                } else if (exportFileDiag.Filter.Name == activeRentalsFilter.Name){
+                    report = Exporter.RentalsReport(bikeRentals);
+                } else if (exportFileDiag.Filter.Name == allRentalsFilter.Name){ 
+                    report = Exporter.RentalsReport(archiveRentals);
+                }
+
+                Console.WriteLine(string.Format("Writing generated report to file {0}", exportFileDiag.Filename));
+                File.WriteAllLines(exportFileDiag.Filename, report.ToArray());
             }
 
             exportFileDiag.Destroy();    
@@ -257,7 +297,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        private static void editModels(object sender, EventArgs e) {
+        private static void editModels(object sender, EventArgs e, MainWindow mainWindow) {
             ModelsViewer modelsWin;
             modelsWin = new ModelsViewer();
             modelsWin.BaseTree.Model = modelStore;
@@ -282,6 +322,8 @@ namespace Cyclone {
 
             modelsWin.ShowAll();
             modelsWin.Show();
+            mainWindow.BaseStatusbar.Push(tempMsgID, "Customising valid bike models...");
+            modelsWin.Destroyed += (modelSender, modelE) => DismissLastMessage(modelSender, modelE, mainWindow);
         }
 
         /// <summary>
@@ -294,10 +336,10 @@ namespace Cyclone {
             FileChooserDialog importFileDialog = new FileChooserDialog("Import An Existing Model File - Cyclone", 
                 editorWindow, FileChooserAction.Open, 
                 "Cancel",ResponseType.Cancel, "Open",ResponseType.Accept);
-            
+
             if (importFileDialog.Run() == (int) ResponseType.Accept) {
                 string importFilename = importFileDialog.Filename;
-                
+
                 if (File.Exists(importFilename)) {
                     List<BikeModel> importedModels = new List<BikeModel>();
                     int oldModelCount = BikeModel.ModelCount;
@@ -601,7 +643,7 @@ namespace Cyclone {
                     }
                 }
             }
-            
+
             if (rentedBikes.Count > 0 && rentedBikes.Count <= 3) {
                 RentWindow newRentWin = new RentWindow(rentedBikes);
                 newRentWin.ShowAll();
@@ -623,6 +665,7 @@ namespace Cyclone {
                 mainWindow.Balance();
                 bikeSales.Add(newSale);
                 RepopulateBikeTree(inventory);
+                mainWindow.BaseStatusbar.Push(messageID, "Concluded sale");
             } catch (FormatException) {
                 throw new NotImplementedException();
             } catch (IndexOutOfRangeException) {
@@ -635,12 +678,12 @@ namespace Cyclone {
                 Rent newRent = rentWindow.ParseRent();
 
                 foreach (Bike bike in newRent.rentedBikes) {
-                    DeleteBike(bike.SecurityCode);
+                    DeleteBike(bike.SecurityCode, false);
                 }
 
                 bikeRentals.Add(newRent);
-                RepopulateRentalsTree(bikeRentals);
                 RepopulateBikeTree(inventory);
+                mainWindow.BaseStatusbar.Push(messageID, "Rental performed");
             } catch (FormatException) {
                 throw new NotImplementedException();
             } catch (IndexOutOfRangeException) {
@@ -653,8 +696,71 @@ namespace Cyclone {
                 mainWindow.SendError("There are no active rentals at the moment");
             } else {
                 ActiveRentals activeRentalsWin = new ActiveRentals();
+                RepopulateRentalsTree(bikeRentals);
+                activeRentalsWin.ItemCount();
+
+                rentalStore.RowInserted += delegate {
+                    activeRentalsWin.ItemCount();
+                };
+    
+                rentalStore.RowDeleted += delegate {
+                    activeRentalsWin.ItemCount();
+                };
+
                 activeRentalsWin.BaseTree.Model = rentalStore;
+
+                activeRentalsWin.returnButton.Clicked += (buttonSender, buttonE) => CheckoutRent(buttonSender, buttonE, activeRentalsWin, mainWindow);
                 activeRentalsWin.ShowAll();
+            }
+        }
+
+        private static void CheckoutRent(object sender, EventArgs e, ActiveRentals rentalsWindow, MainWindow mainWindow) {
+            // Get selected rows
+            TreeSelection selectedRentals = rentalsWindow.BaseTree.Selection;
+            TreePath[] selected = selectedRentals.GetSelectedRows();
+            
+            if (selectedRentals.CountSelectedRows() == 1) {
+                TreeIter rentalIter;
+
+                if (rentalStore.GetIter(out rentalIter, selected[0])) {
+                    int listIndex = (int) rentalStore.GetValue(rentalIter, 0);
+                    Rent returnRental = bikeRentals[listIndex];
+
+                    MessageDialog rentTotalDialog = new MessageDialog(rentalsWindow, 
+                        DialogFlags.DestroyWithParent, 
+                        MessageType.Info, 
+                        ButtonsType.OkCancel,
+                        string.Format("Conclude rental for {0}, with a cost of {1}?", returnRental.Renter, returnRental.CalculateTotal)
+                    );
+
+                    // Get rental from list, calculate and show total, move from rental list back to inventory
+                    rentTotalDialog.Title = "Conclude Rental - Cyclone";
+                    ResponseType rentRes = (ResponseType) rentTotalDialog.Run();
+    
+                    if (rentRes == ResponseType.Ok) {
+                        returnRental.Finish();
+                        mainWindow.Balance();
+
+                        archiveRentals.Add(returnRental);
+                        bikeRentals.RemoveAt(listIndex);
+
+                        foreach (Bike rentedBike in returnRental.rentedBikes) {
+                            AddToInventory(rentedBike.AsInventory);
+                        }
+
+                        RepopulateBikeTree(inventory);
+                        RepopulateRentalsTree(bikeRentals);
+                        mainWindow.BaseStatusbar.Push(messageID, "Concluded rental");
+                        
+                        if (bikeRentals.Count == 0) {
+                            rentalsWindow.Destroy();
+                        }
+                    }
+
+                    rentTotalDialog.Destroy();
+                }
+            } else {
+                mainWindow.SendError("Select only one rental to return");
             }
         }
 
@@ -671,9 +777,53 @@ namespace Cyclone {
                 BikeEditor editBikeWin = new BikeEditor(GroupModels(validModels), inventory[code]);
 
                 editBikeWin.ShowAll();
-                editBikeWin.Show();
+                mainWindow.BaseStatusbar.Push(tempMsgID, "Editing bike...");
+                
+                editBikeWin.Destroyed += (sender, e) => DismissLastMessage(sender, e, mainWindow);
                 editBikeWin.saveEdit.Clicked += (sender, e) => OverwriteBike(sender, e, mainWindow, editBikeWin);
             }
+        }
+
+        private static void LookupBike(object sender, EventArgs e, MainWindow mainWindow) {
+            MessageDialog codeEntryDialog = new MessageDialog(mainWindow,
+                        DialogFlags.DestroyWithParent,
+                        MessageType.Info,
+                        ButtonsType.OkCancel,
+                        "Enter the bike's security code:"
+            );
+
+            Entry codeEntry = new Entry();
+            codeEntryDialog.Modal = true;
+            int entryPadding = 20;
+            codeEntry.MarginLeft = codeEntry.MarginRight = entryPadding;
+            codeEntryDialog.ContentArea.PackStart(codeEntry, false, false, 0);
+            codeEntryDialog.ShowAll();
+            codeEntryDialog.Title = "Lookup Bike Code - Cyclone";
+
+            ResponseType dialogResponse = (ResponseType) codeEntryDialog.Run();
+
+            if (dialogResponse == ResponseType.Ok) {
+                int code;
+                bool parseCode = int.TryParse(codeEntry.Text, out code);
+
+                if (parseCode && inventory.ContainsKey(code)) {
+                    BikeEditor editBikeWin = new BikeEditor(GroupModels(validModels), inventory[code]);
+
+                    editBikeWin.ShowAll();
+                    mainWindow.BaseStatusbar.Push(tempMsgID, "Editing bike...");
+
+                    editBikeWin.Destroyed += (destroySender, destroyEvent) => DismissLastMessage(destroySender, destroyEvent, mainWindow);
+                    editBikeWin.saveEdit.Clicked += (saveSender, saveEvent) => OverwriteBike(saveSender, saveEvent, mainWindow, editBikeWin);
+                } else {
+                    mainWindow.SendError("Could not find a bike with the provided code");
+                }
+            }
+
+            codeEntryDialog.Destroy();
+        }
+
+        private static void DismissLastMessage(object sender, EventArgs e, MainWindow mainWindow) {
+            mainWindow.BaseStatusbar.Pop(tempMsgID);
         }
 
         private static void editModelButton(object sender, EventArgs e, ModelsViewer editorWindow) {
@@ -917,14 +1067,17 @@ namespace Cyclone {
         private static void RepopulateRentalsTree(List<Rent> activeRentals) {
             // Create modelStore if not yet done
             if (rentalStore == null) {
-                rentalStore = new TreeStore(typeof(string), typeof(string), typeof(string), typeof(string));
+                rentalStore = new TreeStore(typeof(int), typeof(string), typeof(int), typeof(string), typeof(string));
             }
 
             rentalStore.Clear();
 
             // For each model make
+            int rentIndex = 0;
             foreach (Rent rent in activeRentals) {
-                TreeIter storeRental = rentalStore.AppendValues(rent.Renter, rent.RentalSummary, rent.BikesCount, rent.rentStartDate.ToString());
+                TreeIter storeRental = rentalStore.AppendValues(rentIndex, rent.Renter, 
+                    rent.BikesCount, rent.RentalSummary, rent.rentStartDate.ToString());
+                rentIndex++;
             }
         }
 
@@ -932,9 +1085,12 @@ namespace Cyclone {
         /// Deletes a bike from the inventory.
         /// </summary>
         /// <param name="secCode">Security code.</param>
-        private static void DeleteBike(int secCode) {
+        private static void DeleteBike(int secCode, bool decreaseCounter = true) {
             // Decrease count now so that deleted event can update indicator accordingly
-            Bike.RemoveBike();
+            if (decreaseCounter) { 
+                Bike.RemoveBike(); 
+            }
+
             inventory.Remove(secCode);
             Console.WriteLine(string.Format("Deleted bike with code {0}", secCode));
         }

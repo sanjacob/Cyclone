@@ -4,7 +4,7 @@ using Gtk;
 
 namespace Cyclone {
     public class ActiveRentals : BaseViewer {
-        ToolButton returnButton;
+        public ToolButton returnButton;
 
         public ActiveRentals()  {
             uint basePadding = 0;
@@ -76,10 +76,10 @@ namespace Cyclone {
                 viewTree.HeadersVisible = true;
                 viewTree.EnableGridLines = TreeViewGridLines.Both;
 
-                viewTree.AppendColumn("Renter", new CellRendererText(), "text", 0);
-                viewTree.AppendColumn("Bikes Rented", new CellRendererText(), "text", 1);
-                viewTree.AppendColumn("No. Of Bikes", new CellRendererText(), "text", 2);
-                viewTree.AppendColumn("Date / Time", new CellRendererText(), "text", 3);
+                viewTree.AppendColumn("Renter", new CellRendererText(), "text", 1);
+                viewTree.AppendColumn("Bikes", new CellRendererText(), "text", 2);
+                viewTree.AppendColumn("Summary", new CellRendererText(), "text", 3);
+                viewTree.AppendColumn("Date / Time", new CellRendererText(), "text", 4);
 
                 viewTree.CanFocus = true;
                 viewTree.Selection.Mode = SelectionMode.Multiple;

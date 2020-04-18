@@ -36,6 +36,7 @@ namespace Cyclone {
 
             //Resizable = false;
             Title = TitleProperty;
+            Modal = true;
 
             // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),
