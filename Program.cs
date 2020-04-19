@@ -25,6 +25,7 @@ namespace Cyclone {
 
         private const string baseInventory = "inventory.txt";
         private const string baseModels = "bikemake.txt";
+
         private static string inventorySave;
         private static string modelsSave;
         private static string purchasesSave;
@@ -119,7 +120,6 @@ namespace Cyclone {
             if (File.Exists(activeRentalsSave)) {
                 bikeRentals = JsonConvert.DeserializeObject<List<Rent>>(File.ReadAllText(activeRentalsSave));
                 mainWindow.BaseStatusbar.Push(messageID, "Recovered saved active rentals");
-                Bike.RemoveBike(bikeRentals.Count);
             }
 
             RepopulateModelTree(validModels);
@@ -265,21 +265,25 @@ namespace Cyclone {
 
             exportFileDiag.DoOverwriteConfirmation = true;
 
+            FileFilter inventoryFilter = new FileFilter();
             FileFilter purchasesFilter = new FileFilter();
             FileFilter salesFilter = new FileFilter();
             FileFilter activeRentalsFilter = new FileFilter();
             FileFilter allRentalsFilter = new FileFilter();
 
+            inventoryFilter.AddPattern("*.txt");
             purchasesFilter.AddPattern("*.txt");
             salesFilter.AddPattern("*.txt");
             activeRentalsFilter.AddPattern("*.txt");
             allRentalsFilter.AddPattern("*.txt");
 
+            inventoryFilter.Name = "Inventory (*.txt)";
             purchasesFilter.Name = "All Purchases (*.txt)";
             salesFilter.Name = "All Sales (*.txt)";
             activeRentalsFilter.Name = "Active Rentals (*.txt)";
             allRentalsFilter.Name = "Past Rentals (*.txt)";
 
+            exportFileDiag.AddFilter(inventoryFilter);
             exportFileDiag.AddFilter(purchasesFilter);
             exportFileDiag.AddFilter(salesFilter);
             exportFileDiag.AddFilter(activeRentalsFilter);
@@ -288,7 +292,9 @@ namespace Cyclone {
             if (exportFileDiag.Run() == (int) ResponseType.Accept) {
                 List<string> report = new List<string>();
 
-                if (exportFileDiag.Filter.Name == purchasesFilter.Name){
+                if (exportFileDiag.Filter.Name == inventoryFilter.Name){
+                    report = Exporter.InventoryReport(inventory.Values.ToList());
+                } else if (exportFileDiag.Filter.Name == purchasesFilter.Name){
                     report = Exporter.PurchasesReport(bikePurchases);
                 } else if (exportFileDiag.Filter.Name == salesFilter.Name){
                     report = Exporter.SalesReport(bikeSales);

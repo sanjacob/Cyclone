@@ -170,7 +170,6 @@ namespace Cyclone
                 return _cost;
             } set {
                 _cost = value;
-                bought = true;
 
                 if (InPurchaseList) {
                     Sale.Balance -= value;
@@ -180,6 +179,7 @@ namespace Cyclone
 
         public void registerPurchaseDate() {
             purchaseDate = DateTime.Now;
+            bought = true;
         }
 
         public bool WasBought {
