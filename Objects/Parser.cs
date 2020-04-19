@@ -36,8 +36,8 @@ namespace Cyclone {
 
                 // Parse fields of Year and Security Code as integers
                 int bikeYear, securityCode;
-                bool yearOK = Int32.TryParse(inventoryLines[i + YEAR_LINE], out bikeYear);
-                bool codeOK = Int32.TryParse(inventoryLines[i + CODE_LINE], out securityCode);
+                bool yearOK = int.TryParse(inventoryLines[i + YEAR_LINE], out bikeYear);
+                bool codeOK = int.TryParse(inventoryLines[i + CODE_LINE], out securityCode);
 
                 // Validate fields
                 bool fieldsEmpty = string.IsNullOrWhiteSpace(make)

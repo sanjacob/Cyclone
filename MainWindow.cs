@@ -414,6 +414,16 @@ public sealed class MainWindow : BaseViewer {
         }
     }
 
+    public bool TitleSaved {
+        set {
+            if (value) {
+                Title = TitleProperty;
+            } else {
+                Title = string.Format("{0}*", TitleProperty);
+            }
+        }
+    }
+
     protected override string IconFilename {
         get {
             return "Cyclone.Assets.Cyclone.png";

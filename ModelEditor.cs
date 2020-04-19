@@ -63,6 +63,7 @@ namespace Cyclone {
             SetSizeRequest(WIN_W, WIN_H);
             //Resizable = false;
             Title = "Create Model - Cyclone";
+            Modal = true;
 
             // Set window icon
             Gdk.Pixbuf windowIcon = new Gdk.Pixbuf(System.Reflection.Assembly.GetEntryAssembly(),

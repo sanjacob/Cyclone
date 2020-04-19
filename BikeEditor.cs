@@ -196,6 +196,7 @@ namespace Cyclone {
             if (!string.IsNullOrWhiteSpace(costEntry.Text) && buyCheck.Active) {
                 if (double.TryParse(costEntry.Text, out double costNumber)) {
                     savedBike.Cost = costNumber;
+                    savedBike.registerPurchaseDate();
                 }
             }
 

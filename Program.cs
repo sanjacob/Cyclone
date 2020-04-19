@@ -27,11 +27,17 @@ namespace Cyclone {
         private const string baseModels = "bikemake.txt";
         private static string inventorySave;
         private static string modelsSave;
+        private static string purchasesSave;
+        private static string salesSave;
+        private static string archiveRentalsSave;
+        private static string activeRentalsSave;
 
         static TreeStore modelStore;
         static TreeStore bikeStore;
         static TreeStore bikeExpStore;
         static TreeStore rentalStore;
+        
+        static MainWindow mainWindow;
 
         // NEW MODEL
         static Dictionary<int, Bike> inventory = new Dictionary<int, Bike>();
@@ -48,16 +54,24 @@ namespace Cyclone {
             string cycloneLocal = Path.Combine(localAppData, "Cyclone");
             inventorySave = Path.Combine(cycloneLocal, "inventory.json");
             modelsSave = Path.Combine(cycloneLocal, "models.json");
+            purchasesSave = Path.Combine(cycloneLocal, "purchases.json");
+            salesSave = Path.Combine(cycloneLocal, "sales.json");
+            archiveRentalsSave = Path.Combine(cycloneLocal, "rentals_archive.json");
+            activeRentalsSave = Path.Combine(cycloneLocal, "rentals.json");
 
             Application.Init();
-            MainWindow mainWindow;
             mainWindow = new MainWindow();
-            mainWindow.DeleteEvent += (deleteO, deleteArgs) => OnWindowClosed(deleteO, deleteArgs, mainWindow);
+            mainWindow.DeleteEvent += (deleteO, deleteArgs) => OnWindowClosed(deleteO, deleteArgs);
 
             Directory.CreateDirectory(cycloneLocal);
 
             if (File.Exists(inventorySave)) {
-                inventory = JsonConvert.DeserializeObject<Dictionary<int, Bike>>(File.ReadAllText(inventorySave));
+                List<Bike> savedInventory = JsonConvert.DeserializeObject<List<Bike>>(File.ReadAllText(inventorySave));
+                
+                foreach (Bike savedBike in savedInventory) {
+                    inventory[savedBike.SecurityCode] = savedBike;
+                }
+
                 mainWindow.BaseStatusbar.Push(messageID, "Recovered saved inventory");
             } else { 
                 try {
@@ -84,11 +98,36 @@ namespace Cyclone {
                 }
             }
 
+            if (File.Exists(purchasesSave)) {
+                bikePurchases = JsonConvert.DeserializeObject<List<Bike>>(File.ReadAllText(purchasesSave));
+                mainWindow.BaseStatusbar.Push(messageID, "Recovered saved purchases");
+                Bike.RemoveBike(bikePurchases.Count);
+            }
+
+            if (File.Exists(salesSave)) {
+                bikeSales = JsonConvert.DeserializeObject<List<Sale>>(File.ReadAllText(salesSave));
+                mainWindow.BaseStatusbar.Push(messageID, "Recovered saved sales");
+                Bike.RemoveBike(bikeSales.Count);
+            }
+
+            if (File.Exists(archiveRentalsSave)) {
+                archiveRentals = JsonConvert.DeserializeObject<List<Rent>>(File.ReadAllText(archiveRentalsSave));
+                mainWindow.BaseStatusbar.Push(messageID, "Recovered saved rentals archive");
+                Bike.RemoveBike(archiveRentals.Count);
+            }
+
+            if (File.Exists(activeRentalsSave)) {
+                bikeRentals = JsonConvert.DeserializeObject<List<Rent>>(File.ReadAllText(activeRentalsSave));
+                mainWindow.BaseStatusbar.Push(messageID, "Recovered saved active rentals");
+                Bike.RemoveBike(bikeRentals.Count);
+            }
+
             RepopulateModelTree(validModels);
             RepopulateBikeTree(inventory);
 
             if (File.Exists(inventorySave)) {
                 changesSaved = true;
+                mainWindow.TitleSaved = true;
             }
             // TODO REMOVE
             //changesSaved = true;
@@ -97,15 +136,16 @@ namespace Cyclone {
 
             mainWindow.BaseTree.Model = bikeStore;
 
-            mainWindow.saveItem.Activated += (sender, e) => saveFile(sender, e, mainWindow);
-            mainWindow.importItem.Activated += (sender, e) => importFile(sender, e, mainWindow);
-            mainWindow.exportItem.Activated += (sender, e) => exportFile(sender, e, mainWindow);
-            mainWindow.modelsItem.Activated += (sender, e) => editModels(sender, e, mainWindow);
-            mainWindow.clearItem.Activated += (sender, e) => clearInventory(sender, e, mainWindow);
+            mainWindow.saveItem.Activated += (sender, e) => saveFile(sender, e);
+            mainWindow.importItem.Activated += (sender, e) => importFile(sender, e);
+            mainWindow.exportItem.Activated += (sender, e) => exportFile(sender, e);
+            mainWindow.modelsItem.Activated += (sender, e) => editModels(sender, e);
+            mainWindow.clearItem.Activated += (sender, e) => clearInventory(sender, e);
 
-            mainWindow.changeView.Toggled += (sender, e) => changeTreeStore(sender, e, mainWindow);
+            mainWindow.changeView.Toggled += (sender, e) => changeTreeStore(sender, e);
 
             mainWindow.ItemCount();
+            mainWindow.Balance();
 
             bikeStore.RowInserted += delegate {
                 mainWindow.ItemCount();
@@ -115,15 +155,15 @@ namespace Cyclone {
                 mainWindow.ItemCount();
             };
 
-            mainWindow.BaseTree.RowActivated += (o, rowArgs) => rowActivate(o, rowArgs, mainWindow);
-            mainWindow.addBikeButton.Clicked += (sender, e) => addBikeButton(sender, e, mainWindow);
-            mainWindow.removeBikeButton.Clicked += (sender, e) => removeBikeButton(sender, e, mainWindow);
-            mainWindow.sellBikeButton.Clicked += (sender, e) => sellBikeButton(sender, e, mainWindow);
-            mainWindow.rentBikeButton.Clicked += (sender, e) => rentBikeButton(sender, e, mainWindow);
-            mainWindow.rentalsButton.Clicked += (sender, e) => activeRentalsButton(sender, e, mainWindow);
-            mainWindow.searchButton.Clicked += (sender, e) => LookupBike(sender, e, mainWindow);
+            mainWindow.BaseTree.RowActivated += (o, rowArgs) => rowActivate(o, rowArgs);
+            mainWindow.addBikeButton.Clicked += (sender, e) => addBikeButton(sender, e);
+            mainWindow.removeBikeButton.Clicked += (sender, e) => removeBikeButton(sender, e);
+            mainWindow.sellBikeButton.Clicked += (sender, e) => sellBikeButton(sender, e);
+            mainWindow.rentBikeButton.Clicked += (sender, e) => rentBikeButton(sender, e);
+            mainWindow.rentalsButton.Clicked += (sender, e) => activeRentalsButton(sender, e);
+            mainWindow.searchButton.Clicked += (sender, e) => LookupBike(sender, e);
 
-            mainWindow.BaseTree.KeyPressEvent += (o, keyArgs) => SuprRow(o, keyArgs, mainWindow);
+            mainWindow.BaseTree.KeyPressEvent += (o, keyArgs) => SuprRow(o, keyArgs);
             mainWindow.ShowAll();
             mainWindow.Show();
             Application.Run();
@@ -134,7 +174,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="a">The alpha component.</param>
-        private static void OnWindowClosed(object sender, DeleteEventArgs a, MainWindow mainWindow) {
+        private static void OnWindowClosed(object sender, DeleteEventArgs a) {
             if (!changesSaved) {
                 string confMsg = string.Format("Do you wish to save the inventory?");
 
@@ -148,7 +188,7 @@ namespace Cyclone {
                 ResponseType result = (ResponseType)saveConfirm.Run();
 
                 if (result == ResponseType.Yes) {
-                    saveAppData(mainWindow);
+                    saveAppData();
                 }
             }
     
@@ -161,15 +201,20 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        /// <param name="mainWindow">Main window.</param>
-        private static void saveFile(object sender, EventArgs e, MainWindow mainWindow) {
-            saveAppData(mainWindow);
+        private static void saveFile(object sender, EventArgs e) {
+            saveAppData();
         }
 
-        private static void saveAppData(MainWindow mainWindow) {
+        private static void saveAppData() {
             SaveInventoryToJSON();
             SaveModelsToJSON();
+            SavePurchasesToJSON();
+            SaveSalesToJSON();
+            SaveArchiveRentalsToJSON();
+            SaveActiveRentalsToJSON();
+
             changesSaved = true;
+            mainWindow.TitleSaved = true;
 
             if (mainWindow != null) {
                 mainWindow.BaseStatusbar.Push(messageID, "Inventory and valid models saved");
@@ -181,8 +226,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="args">Arguments.</param>
-        /// <param name="mainWindow">Main window.</param>
-        private static void importFile(object sender, EventArgs args, MainWindow mainWindow) {
+        private static void importFile(object sender, EventArgs args) {
             FileChooserDialog importFileDialog = new FileChooserDialog("Import An Existing Inventory File - Cyclone", 
                 mainWindow, FileChooserAction.Open, 
                 "Cancel",ResponseType.Cancel, "Open",ResponseType.Accept);
@@ -213,8 +257,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        /// <param name="mainWindow">Main window.</param>
-        private static void exportFile(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void exportFile(object sender, EventArgs e) {
             // Choose report type
             FileChooserDialog exportFileDiag = new FileChooserDialog("Create A Report - Cyclone", 
                 mainWindow, FileChooserAction.Save, 
@@ -267,8 +310,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        /// <param name="mainWindow">Main window.</param>
-        private static void clearInventory(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void clearInventory(object sender, EventArgs e) {
             string confMsg = string.Format( "Are you sure you want to delete ALL {0} bikes in the inventory?", Bike.BikeCount);
 
              MessageDialog clearDialog = new MessageDialog (mainWindow,
@@ -297,7 +339,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        private static void editModels(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void editModels(object sender, EventArgs e) {
             ModelsViewer modelsWin;
             modelsWin = new ModelsViewer();
             modelsWin.BaseTree.Model = modelStore;
@@ -323,7 +365,7 @@ namespace Cyclone {
             modelsWin.ShowAll();
             modelsWin.Show();
             mainWindow.BaseStatusbar.Push(tempMsgID, "Customising valid bike models...");
-            modelsWin.Destroyed += (modelSender, modelE) => DismissLastMessage(modelSender, modelE, mainWindow);
+            modelsWin.Destroyed += (modelSender, modelE) => DismissLastMessage(modelSender, modelE);
         }
 
         /// <summary>
@@ -368,8 +410,7 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        /// <param name="mainWindow">Main window.</param>
-        private static void changeTreeStore(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void changeTreeStore(object sender, EventArgs e) {
             mainWindow.BaseStatusbar.Push(messageID, "Changed view mode");
 
             if (mainWindow.BaseTree.Model == bikeStore) {
@@ -379,7 +420,7 @@ namespace Cyclone {
             }
         }
 
-        private static void addBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void addBikeButton(object sender, EventArgs e) {
             BikeEditor createBikeWin = new BikeEditor(GroupModels(validModels));
 
             Dictionary<string, List<BikeModel>> modelsGrouped = GroupModels(validModels);
@@ -391,7 +432,7 @@ namespace Cyclone {
             createBikeWin.ShowAll();
             createBikeWin.Show();
 
-            createBikeWin.saveEdit.Clicked += (saveSender, saveE) => createBike(saveSender, saveE, mainWindow, createBikeWin);
+            createBikeWin.saveEdit.Clicked += (saveSender, saveE) => createBike(saveSender, saveE, createBikeWin);
         }
         
         private static void addModelButton(object sender, EventArgs e, ModelsViewer editorWindow) {
@@ -404,19 +445,21 @@ namespace Cyclone {
             createModelWin.saveEdit.Clicked += (saveSender, saveE) => createModel(saveSender, saveE, editorWindow, createModelWin);
         }
 
-        private static void createBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor bikeWin) {
+        private static void createBike(object sender, EventArgs e, BikeEditor bikeWin) {
             try {
                 Bike newBike = bikeWin.ParseBike();
                 Console.WriteLine(string.Format("Adding bike of make {0} and model {1}", newBike.Make, newBike.Model));
 
                 AddToInventory(newBike.AsInventory);
                 RepopulateBikeTree(inventory);
-                mainWindow.Balance();
 
                 if (newBike.WasBought) {
-                    bikePurchases.Add(newBike);
+                    Bike clonePurchase = (Bike) newBike.Clone();
+                    clonePurchase.InPurchaseList = true;
+                    bikePurchases.Add(clonePurchase);
                 }
 
+                mainWindow.Balance();
                 mainWindow.BaseStatusbar.Push(messageID, "Added a new bike");
             } catch (FormatException) {
                 int bikeError = bikeWin.errorType;
@@ -437,7 +480,7 @@ namespace Cyclone {
             }
         }
 
-        private static void createModel(object sender, EventArgs e, ModelsViewer mainWindow, ModelEditor modelWin) {
+        private static void createModel(object sender, EventArgs e, ModelsViewer modelsViewer, ModelEditor modelWin) {
             try {
                 BikeModel newBike = modelWin.ParseModel();
                 Console.WriteLine(string.Format("Adding model {0} of make {1}", newBike.Model, newBike.Make));
@@ -446,15 +489,15 @@ namespace Cyclone {
                 RepopulateModelTree(validModels);
             } catch (FormatException) {
                 int modelError = modelWin.errorType;
-                mainWindow.SendError("Please fill in all mandatory fields");
+                modelsViewer.SendError("Please fill in all mandatory fields");
             }
 
             modelWin.Destroy();
         }
 
-        private static void SuprRow(object o, KeyPressEventArgs args, MainWindow mainWindow) {
+        private static void SuprRow(object o, KeyPressEventArgs args) {
             if (args.Event.Key == Gdk.Key.Delete) {
-                deleteBikeTreeRow(mainWindow);
+                deleteBikeTreeRow();
             }
         }
 
@@ -464,15 +507,15 @@ namespace Cyclone {
             }
         }
 
-        private static void removeBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
-            deleteBikeTreeRow(mainWindow);
+        private static void removeBikeButton(object sender, EventArgs e) {
+            deleteBikeTreeRow();
         }
 
         private static void removeModelButton(object sender, EventArgs e, ModelsViewer editorWindow) {
             deleteModelTreeRow(editorWindow);
         }
 
-        private static void deleteBikeTreeRow(MainWindow mainWindow) {
+        private static void deleteBikeTreeRow() {
             // Work with currently used store
             TreeStore activeStore = (TreeStore) mainWindow.BaseTree.Model;
 
@@ -586,7 +629,7 @@ namespace Cyclone {
             md.Destroy();
         }
         
-        private static void sellBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void sellBikeButton(object sender, EventArgs e) {
             List<Bike> soldBikes = new List<Bike>();
 
             // Work with currently used store
@@ -614,13 +657,13 @@ namespace Cyclone {
                 SaleWindow newSaleWin = new SaleWindow(soldBikes);
                 newSaleWin.ShowAll();
                 newSaleWin.Show();
-                newSaleWin.Apply += (applySender, applyE) => NewBikeSale(sender, e, newSaleWin, mainWindow);
+                newSaleWin.Apply += (applySender, applyE) => NewBikeSale(sender, e, newSaleWin);
             } else {
                 mainWindow.SendError("Select between 1 and 10 bikes to sell");
             }
         }
 
-        private static void rentBikeButton(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void rentBikeButton(object sender, EventArgs e) {
             List<Bike> rentedBikes = new List<Bike>();
 
             // Work with currently used store
@@ -648,13 +691,13 @@ namespace Cyclone {
                 RentWindow newRentWin = new RentWindow(rentedBikes);
                 newRentWin.ShowAll();
                 newRentWin.Show();
-                newRentWin.Apply += (applySender, applyE) => NewBikeRent(sender, e, newRentWin, mainWindow);
+                newRentWin.Apply += (applySender, applyE) => NewBikeRent(sender, e, newRentWin);
             } else {
                 mainWindow.SendError("Select between 1 and 3 bikes to rent");
             }
         }
 
-        private static void NewBikeSale(object sender, EventArgs e, SaleWindow saleWindow, MainWindow mainWindow) {
+        private static void NewBikeSale(object sender, EventArgs e, SaleWindow saleWindow) {
             try {
                 Sale newSale = saleWindow.ParseSale();
 
@@ -673,7 +716,7 @@ namespace Cyclone {
             }
         }
         
-        private static void NewBikeRent(object sender, EventArgs e, RentWindow rentWindow, MainWindow mainWindow) {
+        private static void NewBikeRent(object sender, EventArgs e, RentWindow rentWindow) {
             try {
                 Rent newRent = rentWindow.ParseRent();
 
@@ -691,7 +734,7 @@ namespace Cyclone {
             }
         }
 
-        private static void activeRentalsButton(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void activeRentalsButton(object sender, EventArgs e) {
             if (bikeRentals.Count == 0) {
                 mainWindow.SendError("There are no active rentals at the moment");
             } else {
@@ -709,12 +752,12 @@ namespace Cyclone {
 
                 activeRentalsWin.BaseTree.Model = rentalStore;
 
-                activeRentalsWin.returnButton.Clicked += (buttonSender, buttonE) => CheckoutRent(buttonSender, buttonE, activeRentalsWin, mainWindow);
+                activeRentalsWin.returnButton.Clicked += (buttonSender, buttonE) => CheckoutRent(buttonSender, buttonE, activeRentalsWin);
                 activeRentalsWin.ShowAll();
             }
         }
 
-        private static void CheckoutRent(object sender, EventArgs e, ActiveRentals rentalsWindow, MainWindow mainWindow) {
+        private static void CheckoutRent(object sender, EventArgs e, ActiveRentals rentalsWindow) {
             // Get selected rows
             TreeSelection selectedRentals = rentalsWindow.BaseTree.Selection;
             TreePath[] selected = selectedRentals.GetSelectedRows();
@@ -764,7 +807,7 @@ namespace Cyclone {
             }
         }
 
-        private static void rowActivate(object o, RowActivatedArgs args, MainWindow mainWindow) {
+        private static void rowActivate(object o, RowActivatedArgs args) {
             TreeIter rowActive;
             TreeStore activeStore = (TreeStore) mainWindow.BaseTree.Model;
             activeStore.GetIter(out rowActive, args.Path);
@@ -779,12 +822,12 @@ namespace Cyclone {
                 editBikeWin.ShowAll();
                 mainWindow.BaseStatusbar.Push(tempMsgID, "Editing bike...");
                 
-                editBikeWin.Destroyed += (sender, e) => DismissLastMessage(sender, e, mainWindow);
-                editBikeWin.saveEdit.Clicked += (sender, e) => OverwriteBike(sender, e, mainWindow, editBikeWin);
+                editBikeWin.Destroyed += (sender, e) => DismissLastMessage(sender, e);
+                editBikeWin.saveEdit.Clicked += (sender, e) => OverwriteBike(sender, e, editBikeWin);
             }
         }
 
-        private static void LookupBike(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void LookupBike(object sender, EventArgs e) {
             MessageDialog codeEntryDialog = new MessageDialog(mainWindow,
                         DialogFlags.DestroyWithParent,
                         MessageType.Info,
@@ -812,8 +855,8 @@ namespace Cyclone {
                     editBikeWin.ShowAll();
                     mainWindow.BaseStatusbar.Push(tempMsgID, "Editing bike...");
 
-                    editBikeWin.Destroyed += (destroySender, destroyEvent) => DismissLastMessage(destroySender, destroyEvent, mainWindow);
-                    editBikeWin.saveEdit.Clicked += (saveSender, saveEvent) => OverwriteBike(saveSender, saveEvent, mainWindow, editBikeWin);
+                    editBikeWin.Destroyed += (destroySender, destroyEvent) => DismissLastMessage(destroySender, destroyEvent);
+                    editBikeWin.saveEdit.Clicked += (saveSender, saveEvent) => OverwriteBike(saveSender, saveEvent, editBikeWin);
                 } else {
                     mainWindow.SendError("Could not find a bike with the provided code");
                 }
@@ -822,7 +865,7 @@ namespace Cyclone {
             codeEntryDialog.Destroy();
         }
 
-        private static void DismissLastMessage(object sender, EventArgs e, MainWindow mainWindow) {
+        private static void DismissLastMessage(object sender, EventArgs e) {
             mainWindow.BaseStatusbar.Pop(tempMsgID);
         }
 
@@ -870,9 +913,8 @@ namespace Cyclone {
         /// </summary>
         /// <param name="sender">Sender.</param>
         /// <param name="e">E.</param>
-        /// <param name="mainWindow">Main window.</param>
         /// <param name="editBikeWin">Edit bike window.</param>
-        private static void OverwriteBike(object sender, EventArgs e, MainWindow mainWindow, BikeEditor editBikeWin) {
+        private static void OverwriteBike(object sender, EventArgs e, BikeEditor editBikeWin) {
             try {
                 Bike newBike = editBikeWin.ParseBike();
                 DeleteBike(newBike.SecurityCode);
@@ -971,6 +1013,7 @@ namespace Cyclone {
             }
 
             changesSaved = false;
+            mainWindow.TitleSaved = false;
         }
 
         /// <summary>
@@ -1035,6 +1078,9 @@ namespace Cyclone {
                         validModel.Make, validModel.Model, validModel.Type);
                 }
             }
+
+            changesSaved = false;
+            mainWindow.TitleSaved = false;
         }
 
         /// <summary>
@@ -1145,13 +1191,38 @@ namespace Cyclone {
         }
 
         private static void SaveInventoryToJSON() {
-            string inventoryJSON = JsonConvert.SerializeObject(inventory);
+            string inventoryJSON = JsonConvert.SerializeObject(inventory.Values.ToList());
             File.WriteAllText(inventorySave, inventoryJSON);
         }
 
         private static void SaveModelsToJSON() {
             string modelsJSON = JsonConvert.SerializeObject(validModels);
             File.WriteAllText(modelsSave, modelsJSON);
+        }
+
+        private static void SavePurchasesToJSON() {
+            string purchasesJSON = JsonConvert.SerializeObject(bikePurchases);
+            File.WriteAllText(purchasesSave, purchasesJSON);
+        }
+
+        private static void SaveSalesToJSON() {
+            string salesJSON = JsonConvert.SerializeObject(bikeSales);
+            File.WriteAllText(salesSave, salesJSON);
+        }
+
+        private static void SaveArchiveRentalsToJSON() {
+            string archiveRentalsJSON = JsonConvert.SerializeObject(archiveRentals);
+            File.WriteAllText(archiveRentalsSave, archiveRentalsJSON);
+        }
+
+        private static void SaveActiveRentalsToJSON() {
+            string activeRentalsJSON = JsonConvert.SerializeObject(bikeRentals);
+            File.WriteAllText(activeRentalsSave, activeRentalsJSON);
+        }
+
+        private static void SaveStaticsToJSON() {
+            string activeRentalsJSON = JsonConvert.SerializeObject(bikeRentals);
+            File.WriteAllText(activeRentalsSave, activeRentalsJSON);
         }
     }
 }

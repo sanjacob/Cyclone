@@ -1,4 +1,6 @@
 ﻿using System;
+using Newtonsoft.Json;
+
 namespace Cyclone.Objects {
     public class ClientData {
         public string Name { get; }
@@ -7,11 +9,12 @@ namespace Cyclone.Objects {
         public string Mail { get; set; }
         public Address ClientAddress { get; }
 
-        public ClientData(string name, string surname, string phone, Address address) {
-            Name = name;
-            Surname = surname;
-            Phone = phone;
-            ClientAddress = address;
+        [JsonConstructor]
+        public ClientData(string Name, string Surname, string Phone, Address ClientAddress) {
+            this.Name = Name;
+            this.Surname = Surname;
+            this.Phone = Phone;
+            this.ClientAddress = ClientAddress;
         }
         
         public ClientData(string name, string surname, string phone) {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace Cyclone.Objects {
     public class Rent {
@@ -30,7 +31,20 @@ namespace Cyclone.Objects {
             hourlyRate = rate;
             RentalsCount++;
         }
-        
+
+        [JsonConstructor]
+        public Rent(double rate, bool concluded, double rentEarnings) {
+            hourlyRate = rate;
+            RentalsCount++;
+
+            this.concluded = concluded;
+            if (this.concluded) {
+                this.rentEarnings = rentEarnings;
+                Sale.Balance += rentEarnings;
+            }
+        }
+
+        [JsonIgnore]
         public double CalculateTotal {
             get {
                 // Get span of time in hours, multiply by hourly rate and number of bikes
@@ -48,6 +62,15 @@ namespace Cyclone.Objects {
             concluded = true;
         }
 
+        public double HourlyRate {
+            get {
+                return hourlyRate;
+            } set {
+                hourlyRate = value;
+            }
+        }
+
+        [JsonIgnore]
         public string RentalSummary {
             get {
                 string summary = "";
@@ -58,12 +81,14 @@ namespace Cyclone.Objects {
             }
         }
 
+        [JsonIgnore]
         public int BikesCount {
             get {
                 return rentedBikes.Count;
             }
         }
 
+        [JsonIgnore]
         public string Renter {
             get {
                 return string.Format("{0} {1}", clientData.Name, clientData.Surname);

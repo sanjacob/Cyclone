@@ -12,7 +12,7 @@ namespace Cyclone
     /// <summary>
     /// Bike object.
     /// </summary>
-    public class Bike
+    public class Bike : ICloneable
     {
         private string _make;
         private string _type;
@@ -37,7 +37,8 @@ namespace Cyclone
         public string Tyres { get; set; }
         public string Saddle { get; set; }
         public double Weight { get; set; }
-        public bool WasBought { get; set; }
+        private bool bought { get; set; }
+        public bool InPurchaseList { get; set; }
 
         private static int bikeTotal;
 
@@ -169,18 +170,29 @@ namespace Cyclone
                 return _cost;
             } set {
                 _cost = value;
-                WasBought = true;
-                Sale.Balance -= value;
-                purchaseDate = DateTime.Now;
+                bought = true;
+
+                if (InPurchaseList) {
+                    Sale.Balance -= value;
+                }
+            }
+        }
+
+        public void registerPurchaseDate() {
+            purchaseDate = DateTime.Now;
+        }
+
+        public bool WasBought {
+            get {
+                return bought;
             }
         }
 
         public DateTime PurchaseDate {
             get {
-                if (!WasBought) {
-                    throw new InvalidOperationException();    
-                }
                 return purchaseDate;
+            } set {
+                purchaseDate = value;
             }
         }
 
@@ -214,6 +226,7 @@ namespace Cyclone
         /// <param name="wheelSize">Wheel size.</param>
         /// <param name="forks">Forks.</param>
         /// <param name="securityCode">Security code.</param>
+        [JsonConstructor]
         public Bike(string make, string type, string model, int year, string wheelSize, string forks, int securityCode)
         {
             Make = make;
@@ -234,7 +247,11 @@ namespace Cyclone
         public static void RemoveBike(int amount = 1) {
             bikeTotal -= amount;
         }
-        
+
+        public object Clone() {
+            return MemberwiseClone();
+        }
+
         /// <summary>
         /// Gets bike as inventory.
         /// </summary>

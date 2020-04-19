@@ -8,13 +8,13 @@ namespace Cyclone.Objects {
         public string addressTwo;
         public string postalCode;
 
-        public Address(string country, string region, string city, string aOne, string aTwo, string code) {
+        public Address(string country, string region, string city, string addressOne, string addressTwo, string postalCode) {
             this.country = country;
             this.region = region;
             this.city = city;
-            addressOne = aOne;
-            addressTwo = aTwo;
-            postalCode = code;
+            this.addressOne = addressOne;
+            this.addressTwo = addressTwo;
+            this.postalCode = postalCode;
         }
     }
 }

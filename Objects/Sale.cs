@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Cyclone.Objects {
     public class Sale {
@@ -16,22 +17,24 @@ namespace Cyclone.Objects {
         public const int CARD = 1;
         public const int PAYPAL = 2;
 
-        public Sale(List<Bike> soldBikes, List<int> earnings, ClientData client, int payment) {
+        public Sale(List<Bike> soldBikes, List<int> bikeEarnings, ClientData clientData, int paymentType) {
             this.soldBikes = soldBikes;
-            bikeEarnings = earnings;
-            clientData = client;
-            paymentType = payment;
+            this.bikeEarnings = bikeEarnings;
+            this.clientData = clientData;
+            this.paymentType = paymentType;
             saleDate = DateTime.Now;
 
             Balance += Total;
         }
 
+        [JsonIgnore]
         public int Total {
             get {
                 return bikeEarnings.AsParallel().Sum();
             }
         }
 
+        [JsonIgnore]
         public string Buyer {
             get {
                 return string.Format("{0} {1}", clientData.Name, clientData.Surname);

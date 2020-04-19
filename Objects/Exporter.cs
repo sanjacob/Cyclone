@@ -135,7 +135,7 @@ namespace Cyclone.Objects {
                 };
 
                 row[3] = new string[] {
-                    string.Format(" {0} ", bike.Cost)
+                    string.Format(" ${0} ", bike.Cost)
                 };
 
                 totalExpenses += bike.Cost;
