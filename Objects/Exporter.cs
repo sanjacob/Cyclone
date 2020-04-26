@@ -247,7 +247,7 @@ namespace Cyclone.Objects {
 
             string hSeparator = CreateSeparator(salesTable[0].Length);
             report.Add(hSeparator);
-            report.Add(string.Format("CYCLONE® BIKE PURCHASES REPORT, GENERATED {0}", DateTime.Now.ToString("s")));
+            report.Add(string.Format("CYCLONE® BIKE INVENTORY REPORT, GENERATED {0}", DateTime.Now.ToString("s")));
             report.Add(hSeparator);
             report.Add("");
 
